@@ -1,0 +1,17 @@
+
+> shopkitpro@0.1.0 dev
+> next dev --turbopack
+
+ ⚠ Port 3000 is in use by process 7660, using available port 3002 instead.
+   ▲ Next.js 15.4.1 (Turbopack)
+   - Local:        http://localhost:3002
+   - Network:      http://192.168.1.219:3002
+   - Environments: .env
+   - Experiments (use with caution):
+     ✓ useCache
+     · cacheLife
+
+ ✓ Starting...
+ ○ Compiling middleware ...
+ ✓ Compiled middleware in 558ms
+ ✓ Ready in 3.5s
