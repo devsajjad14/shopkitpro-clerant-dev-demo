@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { withPerformanceMonitoring } from '@/lib/utils/performance-monitor'
 
-// Lightweight image processing utilities  
+// Lightweight image processing utilities
 const generateId = () => Math.random().toString(36).substring(2, 12)
 
 const validateImageFile = (file: File): boolean => {
@@ -38,11 +38,10 @@ async function uploadHandler(request: Request) {
   const uniqueId = generateId()
   const basePath = `products/${styleId}_${uniqueId}`
   
-  // Return optimized response
+  // Simulate optimized upload response
   if (isAlternate) {
     return NextResponse.json({
       altImage: `${basePath}_alt_${alternateIndex}.jpg`,
-      AltImage: `${basePath}_alt_${alternateIndex}.jpg`,
       alternateIndex
     })
   }
@@ -66,7 +65,7 @@ async function deleteHandler(request: Request) {
     )
   }
 
-  // Return success response
+  // Simulate deletion success
   return NextResponse.json({ 
     success: true, 
     deletedUrl: imageUrl 
