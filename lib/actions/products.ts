@@ -787,40 +787,4 @@ export async function deleteProduct(id: string): Promise<ProductResponse> {
       error: error instanceof Error ? error.message : 'Failed to delete product'
     }
   }
-}
-
-// Stub function for fixing missing variant attributes
-export async function fixMissingVariantAttributes(styleId: string): Promise<ProductResponse> {
-  try {
-    // TODO: Implement variant attributes fixing logic
-    console.log('Fix missing variant attributes called for styleId:', styleId)
-    return {
-      success: true,
-      message: 'Variant attributes fix functionality not yet implemented'
-    }
-  } catch (error) {
-    console.error('Error fixing variant attributes:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fix variant attributes'
-    }
-  }
-}
-
-// Stub function for fixing product variant attributes
-export async function fixProductVariantAttributes(styleId: string): Promise<ProductResponse> {
-  try {
-    // TODO: Implement product variant attributes fixing logic
-    console.log('Fix product variant attributes called for styleId:', styleId)
-    return {
-      success: true,
-      message: 'Product variant attributes fix functionality not yet implemented'
-    }
-  } catch (error) {
-    console.error('Error fixing product variant attributes:', error)
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fix product variant attributes'
-    }
-  }
 } 

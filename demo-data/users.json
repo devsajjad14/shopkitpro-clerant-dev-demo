@@ -1,0 +1,114 @@
+[
+  {
+    "id": "1215c6cf-2d76-4555-a468-2ced566a3c6f",
+    "name": "Sajjad Hussain",
+    "email": "sajjadast786@gmail.com",
+    "password": "$2b$10$XZdOm456wZ58VAXGCrKo9eptD57k2ACdG.r9Fceg3OJz8SRu0abbC",
+    "emailVerified": null,
+    "image": "https://lh3.googleusercontent.com/a/ACg8ocJJTI5b5a20Gh6K2g_3Mi7vNh0zDYJrVo3eKtsVl5xpmRSVvYso=s96-c"
+  },
+  {
+    "id": "2c66d7f3-34bc-4598-bafa-5fed0f005401",
+    "name": "User 1",
+    "email": "user1@mystore.com",
+    "password": "$2b$10$.36hkLUkdqGdIdVJxJnWmOgl9UQhPM/QN69gPqexrIKaQtsOjwKPe",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "3b2d69d4-6a34-474f-81fe-883bf2272c72",
+    "name": "sajjad ",
+    "email": "sajjad2@gmail.com",
+    "password": "$2b$10$0vsmFkexQBm76DPpUXbvFeY.wMX9tdHAbrGiKg0mn5.ItFVzENls2",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "45ffaf30-c5ae-4dd9-8a27-19b9f32035dc",
+    "name": "Sajjad Hussain",
+    "email": "sajjad4@gmail.com",
+    "password": "$2b$10$Dkh.oHSY4p0bA/z36OLKC.rx6uiZX.DV60GfDyDRxY2M6L4e.1pFa",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "4eb5ac03-6c1b-493d-8b9d-16e2202d2aa8",
+    "name": "sajjad Hussain",
+    "email": "sajjad3@gmail.com",
+    "password": "$2b$10$XZdOm456wZ58VAXGCrKo9eptD57k2ACdG.r9Fceg3OJz8SRu0abbC",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "hashed_password",
+    "emailVerified": "2024-03-20 05:00:00",
+    "image": "https://picsum.photos/200"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "password": "hashed_password",
+    "emailVerified": "2024-03-20 05:00:00",
+    "image": "https://picsum.photos/200"
+  },
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440002",
+    "name": "Nicole Thomas",
+    "email": "sbalfour@example.com",
+    "password": "hashed_password_here",
+    "emailVerified": "2024-03-20 05:00:00",
+    "image": "https://api.dicebear.com/7.x/avataaars/svg?seed=Admin"
+  },
+  {
+    "id": "57027663-4ca3-4c02-baaa-0d4b72d3e1da",
+    "name": "Emily Johnson",
+    "email": "emilyjohson@gmail.com",
+    "password": null,
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "5e870a23-96f9-436e-8ea4-0c8468261d8b",
+    "name": "ali",
+    "email": "ali@mystore.com",
+    "password": "$2b$10$Gbq94A/C34C36srL59tPa.SO5angUpEQoMJkofwmDMdcE./GTsz8K",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "670f509b-e94d-4915-8365-e329d018b5e3",
+    "name": "sajjad ",
+    "email": "sajjad.hussainast14@gmail.com",
+    "password": "$2b$10$eSWlJnnlYdOhlROzFMg45OgbrOTWjIG70LxpneBWEsb7T/r0f4wVu",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "82b3db2c-20ba-4299-bb88-8e65dca92d0a",
+    "name": "Sajjad Hussain",
+    "email": "sajjad.hussain.kamil@gmail.com",
+    "password": "$2b$10$POBXajrf5EpSGMcWGVk8.OQ1OuQpUMC8kGRynmgFnRl1Xjw721JZO",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "b9a5b43e-c06e-4801-bf02-c1d13a6f1732",
+    "name": "Zeke Hamdani",
+    "email": "zhamdani@celerant.com",
+    "password": "$2b$10$.VmKzvmvbpi73yIMWCiS8uHsEwyl6sM0oQO6u.Jy5BuCzJ8sDfGB6",
+    "emailVerified": null,
+    "image": null
+  },
+  {
+    "id": "f32ba97d-f9a3-4fcb-a545-450610a56f86",
+    "name": "Sajjad Hussain",
+    "email": "sajjad1@gmail.com",
+    "password": "$2b$10$mSCAA7p5E3VifG/fxsTfm.u9FuOiZbciNjlYjqM9TqKNZlnuKDQN6",
+    "emailVerified": null,
+    "image": null
+  }
+]

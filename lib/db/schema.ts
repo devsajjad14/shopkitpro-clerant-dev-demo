@@ -1392,22 +1392,6 @@ export const campaignEmails = pgTable('campaign_emails', {
   createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
 })
 
-// Recovery Campaigns Table - Template definitions for cart recovery campaigns
-export const recoveryCampaigns = pgTable('recovery_campaigns', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
-  description: text('description'),
-  subject: text('subject').notNull(),
-  delayHours: integer('delay_hours').default(24).notNull(),
-  discountType: text('discount_type', { enum: ['percentage', 'fixed'] }),
-  discountValue: decimal('discount_value', { precision: 10, scale: 2 }),
-  discountCode: text('discount_code'),
-  maxEmails: integer('max_emails').default(3).notNull(),
-  isActive: boolean('is_active').default(true).notNull(),
-  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
-  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow(),
-})
-
 // Data Updater Table - Store data manager import configuration and status
 export const dataUpdater = pgTable('data_updater', {
   id: serial('id').primaryKey(),
@@ -1443,10 +1427,6 @@ export type NewCartRecovered = typeof cartsRecovered.$inferInsert
 // Type exports for Campaign Emails
 export type CampaignEmail = typeof campaignEmails.$inferSelect
 export type NewCampaignEmail = typeof campaignEmails.$inferInsert
-
-// Type exports for Recovery Campaigns
-export type RecoveryCampaign = typeof recoveryCampaigns.$inferSelect
-export type NewRecoveryCampaign = typeof recoveryCampaigns.$inferInsert
 
 // Type exports for Data Updater
 export type DataUpdater = typeof dataUpdater.$inferSelect
