@@ -18,8 +18,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio",
-    "postinstall": "npm install --force"
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@auth/core": "^0.38.0",
@@ -106,14 +105,6 @@
     "not IE 11",
     "not dead"
   ],
-  "overrides": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "resolutions": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/node": "^20",
