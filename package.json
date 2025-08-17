@@ -16,9 +16,10 @@
     "migrate": "tsx scripts/migrate.ts",
     "migrate:assets": "tsx scripts/migrate-assets-to-blob.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate", 
+    "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "postinstall": "npm install --force"
   },
   "dependencies": {
     "@auth/core": "^0.38.0",
