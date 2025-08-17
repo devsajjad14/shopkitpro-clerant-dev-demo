@@ -3,7 +3,16 @@ import { readdir, stat } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { list } from '@vercel/blob'
-import { detectServerDeploymentEnvironment } from '@/lib/utils/server-deployment-detection'
+
+// Dynamic import for server detection
+const getServerDeploymentEnvironment = async () => {
+  try {
+    const { detectServerDeploymentEnvironment } = await import('@/lib/utils/server-deployment-detection')
+    return detectServerDeploymentEnvironment()
+  } catch {
+    return { platform: 'server' as const }
+  }
+}
 
 interface MediaAsset {
   id: string
@@ -52,21 +61,32 @@ const MEDIA_EXTENSIONS = [
 
 /**
  * GET /api/admin/media/assets
- * Professional media asset discovery endpoint
- * Scans media directories and returns standardized asset information
+ * Enterprise-optimized media asset discovery with pagination and streaming
+ * Query params:
+ * - platform: 'vercel' | 'server' | auto-detect
+ * - page: number (default: 1)
+ * - limit: number (default: 50, max: 100)
+ * - category: string (optional filter)
+ * - search: string (optional filename search)
  */
 export async function GET(request: Request) {
   try {
-    console.log('🔍 Starting media asset discovery...')
-    
-    // Get platform from query parameter (admin switcher setting)
     const { searchParams } = new URL(request.url)
+    
+    // Pagination parameters
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(100, Math.max(10, parseInt(searchParams.get('limit') || '50')))
+    const offset = (page - 1) * limit
+    
+    // Filter parameters
+    const categoryFilter = searchParams.get('category')
+    const searchFilter = searchParams.get('search')?.toLowerCase()
     const requestedPlatform = searchParams.get('platform')
     
-    // Detect actual platform
-    const deploymentEnv = detectServerDeploymentEnvironment()
+    console.log(`🔍 Starting paginated asset discovery (page: ${page}, limit: ${limit})`)
     
-    // Use requested platform if provided, otherwise use detected platform
+    // Detect platform
+    const deploymentEnv = await getServerDeploymentEnvironment()
     const effectivePlatform = requestedPlatform === 'vercel' ? 'vercel' : 
                             requestedPlatform === 'server' ? 'server' : 
                             deploymentEnv.platform
@@ -95,9 +115,12 @@ export async function GET(request: Request) {
         console.log('🔍 Discovering Vercel blob assets...')
         const assets: MediaAsset[] = []
         
-        // First, let's get ALL blobs to understand the storage structure
-        console.log('🔍 Getting ALL blobs to understand storage structure...')
-        const { blobs: allBlobs } = await list({ limit: 1000 })
+        // Get blobs with pagination to avoid memory issues
+        console.log(`🔍 Getting blobs (limit: ${limit * 2})...`)
+        const { blobs: allBlobs } = await list({ 
+          limit: Math.min(1000, limit * 10), // Get more than needed for filtering
+          prefix: categoryFilter ? `${VERCEL_FOLDERS[categoryFilter as keyof typeof VERCEL_FOLDERS]}/` : undefined
+        })
         
         console.log(`📊 TOTAL BLOBS FOUND: ${allBlobs.length}`)
         console.log('📋 All blob paths:')
@@ -126,8 +149,11 @@ export async function GET(request: Request) {
           try {
             console.log(`🔍 Scanning Vercel folder: ${folderPath}`)
             
-            // List blobs with category prefix
-            const { blobs } = await list({ prefix: `${folderPath}/`, limit: 1000 })
+            // List blobs with category prefix and reasonable limit
+            const { blobs } = await list({ 
+              prefix: `${folderPath}/`, 
+              limit: Math.min(500, limit * 5) // Dynamic limit based on page size
+            })
             
             console.log(`📸 Found ${blobs.length} blobs in ${category} folder (${folderPath})`)
             
@@ -225,10 +251,22 @@ export async function GET(request: Request) {
           }
         }
         
-        // Sort assets by upload date (newest first)
-        assets.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+        // Apply search filter if provided
+        let filteredAssets = assets
+        if (searchFilter) {
+          filteredAssets = assets.filter(asset => 
+            asset.filename.toLowerCase().includes(searchFilter)
+          )
+        }
         
-        console.log(`✅ Vercel blob discovery completed: ${assets.length} assets found`)
+        // Sort by upload date (newest first)
+        filteredAssets.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+        
+        // Apply pagination
+        const totalAssets = filteredAssets.length
+        const paginatedAssets = filteredAssets.slice(offset, offset + limit)
+        
+        console.log(`✅ Vercel blob discovery completed: ${totalAssets} total, ${paginatedAssets.length} on page ${page}`)
         
         // Calculate statistics
         const stats = {
@@ -248,10 +286,31 @@ export async function GET(request: Request) {
         
         return NextResponse.json({
           success: true,
-          assets,
-          stats,
+          assets: paginatedAssets,
+          pagination: {
+            page,
+            limit,
+            total: totalAssets,
+            totalPages: Math.ceil(totalAssets / limit),
+            hasNext: page < Math.ceil(totalAssets / limit),
+            hasPrev: page > 1
+          },
+          stats: {
+            totalAssets,
+            totalSize: filteredAssets.reduce((acc, asset) => acc + asset.size, 0),
+            categories: Object.fromEntries(
+              Object.keys(VERCEL_FOLDERS).map(category => [
+                category,
+                filteredAssets.filter(asset => asset.category === category).length
+              ])
+            ),
+            types: filteredAssets.reduce((acc, asset) => {
+              acc[asset.type] = (acc[asset.type] || 0) + 1
+              return acc
+            }, {} as Record<string, number>)
+          },
           platform: effectivePlatform,
-          scannedFolders: Object.keys(VERCEL_FOLDERS),
+          filters: { category: categoryFilter, search: searchFilter },
           timestamp: new Date().toISOString()
         })
         
@@ -371,10 +430,25 @@ export async function GET(request: Request) {
       }
     }
 
-    // Sort assets by upload date (newest first)
-    assets.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+    // Apply filters
+    let filteredAssets = assets
+    if (categoryFilter && MEDIA_DIRECTORIES[categoryFilter as keyof typeof MEDIA_DIRECTORIES]) {
+      filteredAssets = assets.filter(asset => asset.category === categoryFilter)
+    }
+    if (searchFilter) {
+      filteredAssets = filteredAssets.filter(asset => 
+        asset.filename.toLowerCase().includes(searchFilter)
+      )
+    }
+    
+    // Sort by upload date (newest first)
+    filteredAssets.sort((a, b) => b.uploadedAt.getTime() - a.uploadedAt.getTime())
+    
+    // Apply pagination
+    const totalAssets = filteredAssets.length
+    const paginatedAssets = filteredAssets.slice(offset, offset + limit)
 
-    console.log(`✅ Asset discovery completed: ${assets.length} assets found`)
+    console.log(`✅ Asset discovery completed: ${totalAssets} total, ${paginatedAssets.length} on page ${page}`)
 
     // Calculate statistics
     const stats = {
@@ -394,10 +468,31 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      assets,
-      stats,
+      assets: paginatedAssets,
+      pagination: {
+        page,
+        limit,
+        total: totalAssets,
+        totalPages: Math.ceil(totalAssets / limit),
+        hasNext: page < Math.ceil(totalAssets / limit),
+        hasPrev: page > 1
+      },
+      stats: {
+        totalAssets,
+        totalSize: filteredAssets.reduce((acc, asset) => acc + asset.size, 0),
+        categories: Object.fromEntries(
+          Object.keys(MEDIA_DIRECTORIES).map(category => [
+            category,
+            filteredAssets.filter(asset => asset.category === category).length
+          ])
+        ),
+        types: filteredAssets.reduce((acc, asset) => {
+          acc[asset.type] = (acc[asset.type] || 0) + 1
+          return acc
+        }, {} as Record<string, number>)
+      },
       platform: effectivePlatform,
-      scannedDirectories: Object.keys(MEDIA_DIRECTORIES),
+      filters: { category: categoryFilter, search: searchFilter },
       timestamp: new Date().toISOString()
     })
 

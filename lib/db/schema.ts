@@ -1431,3 +1431,31 @@ export type NewCampaignEmail = typeof campaignEmails.$inferInsert
 // Type exports for Data Updater
 export type DataUpdater = typeof dataUpdater.$inferSelect
 export type NewDataUpdater = typeof dataUpdater.$inferInsert
+
+// Recovery Campaigns Table - Track email campaigns for cart recovery
+export const recoveryCampaigns = pgTable('recovery_campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  description: text('description'),
+  status: text('status', { enum: ['draft', 'active', 'paused', 'completed'] }).default('draft').notNull(),
+  emailSubject: text('email_subject').notNull(),
+  emailTemplate: text('email_template').notNull(),
+  triggerDelayHours: integer('trigger_delay_hours').default(1).notNull(),
+  targetAudience: text('target_audience', { enum: ['all', 'first_time', 'returning'] }).default('all').notNull(),
+  maxEmails: integer('max_emails').default(3).notNull(),
+  emailsSent: integer('emails_sent').default(0).notNull(),
+  emailsOpened: integer('emails_opened').default(0).notNull(),
+  emailsClicked: integer('emails_clicked').default(0).notNull(),
+  cartsRecovered: integer('carts_recovered').default(0).notNull(),
+  revenueRecovered: decimal('revenue_recovered', { precision: 10, scale: 2 }).default('0'),
+  createdBy: uuid('created_by').references(() => users.id),
+  createdAt: timestamp('created_at', { mode: 'date' }).defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'date' }).defaultNow(),
+})
+
+// Type exports for Recovery Campaigns
+export type RecoveryCampaign = typeof recoveryCampaigns.$inferSelect
+export type NewRecoveryCampaign = typeof recoveryCampaigns.$inferInsert
+
+// Explicit export to ensure Vercel compatibility
+export { recoveryCampaigns }

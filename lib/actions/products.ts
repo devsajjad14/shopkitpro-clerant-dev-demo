@@ -787,4 +787,118 @@ export async function deleteProduct(id: string): Promise<ProductResponse> {
       error: error instanceof Error ? error.message : 'Failed to delete product'
     }
   }
-} 
+}
+
+// Fix missing variant attributes for a specific product
+export async function fixMissingVariantAttributes(styleId: string): Promise<ProductResponse> {
+  try {
+    const numericStyleId = parseInt(styleId)
+    if (isNaN(numericStyleId)) {
+      return { success: false, error: 'Invalid styleId' }
+    }
+
+    const product = await db.query.products.findFirst({
+      where: (products, { eq }) => eq(products.styleId, numericStyleId),
+      with: {
+        variations: {
+          with: {
+            attributes: true
+          }
+        }
+      }
+    })
+
+    if (!product) {
+      return { success: false, error: 'Product not found' }
+    }
+
+    let fixedCount = 0
+    for (const variation of product.variations) {
+      if (!variation.attributes || variation.attributes.length === 0) {
+        // Add default size and color attributes if missing
+        const defaultAttributes = [
+          { attributeId: 'size', attributeValueId: 'default', value: 'One Size' },
+          { attributeId: 'color', attributeValueId: 'default', value: 'Default' }
+        ]
+
+        await db.insert(variantAttributes).values(
+          defaultAttributes.map(attr => ({
+            variationId: variation.id,
+            attributeId: attr.attributeId,
+            attributeValueId: attr.attributeValueId,
+          }))
+        )
+        fixedCount++
+      }
+    }
+
+    return { 
+      success: true, 
+      message: `Fixed variant attributes for ${fixedCount} variations` 
+    }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to fix variant attributes' 
+    }
+  }
+}
+
+// Fix variant attributes for all products
+export async function fixProductVariantAttributes(styleId?: string): Promise<ProductResponse> {
+  try {
+    let products: any[]
+    
+    if (styleId) {
+      const numericStyleId = parseInt(styleId)
+      if (isNaN(numericStyleId)) {
+        return { success: false, error: 'Invalid styleId' }
+      }
+      
+      const product = await db.query.products.findFirst({
+        where: (products, { eq }) => eq(products.styleId, numericStyleId),
+        with: { variations: { with: { attributes: true } } }
+      })
+      
+      products = product ? [product] : []
+    } else {
+      products = await db.query.products.findMany({
+        with: { variations: { with: { attributes: true } } }
+      })
+    }
+
+    let totalFixed = 0
+    for (const product of products) {
+      for (const variation of product.variations) {
+        if (!variation.attributes || variation.attributes.length === 0) {
+          const defaultAttributes = [
+            { attributeId: 'size', attributeValueId: 'default' },
+            { attributeId: 'color', attributeValueId: 'default' }
+          ]
+
+          await db.insert(variantAttributes).values(
+            defaultAttributes.map(attr => ({
+              variationId: variation.id,
+              attributeId: attr.attributeId,
+              attributeValueId: attr.attributeValueId,
+            }))
+          )
+          totalFixed++
+        }
+      }
+    }
+
+    return { 
+      success: true, 
+      message: `Fixed variant attributes for ${totalFixed} variations across ${products.length} products` 
+    }
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to fix product variant attributes' 
+    }
+  }
+}
+
+// Explicit exports for Vercel compatibility
+export { fixMissingVariantAttributes, fixProductVariantAttributes } 

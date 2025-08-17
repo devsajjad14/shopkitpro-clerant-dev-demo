@@ -1,6 +1,7 @@
 import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
+  // Modern Next.js 15 optimizations
   async rewrites() {
     return [
       {
@@ -9,6 +10,7 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  
   async headers() {
     return [
       {
@@ -16,8 +18,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value:
-              "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob: *.vercel-storage.com; font-src 'self'; connect-src 'self' *.vercel-storage.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
           {
             key: 'Strict-Transport-Security',
@@ -31,43 +32,160 @@ const nextConfig: NextConfig = {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
         ],
       },
     ]
   },
+  
+  // Next.js 15 experimental features
   experimental: {
+    // React Compiler (requires canary, disabled for stable build)
+    // reactCompiler: true,
+    
+    // Advanced caching
     useCache: true,
-
     cacheLife: {
+      default: {
+        stale: 300, // 5 minutes
+        revalidate: 900, // 15 minutes  
+        expire: 3600, // 1 hour
+      },
+      long: {
+        stale: 3600, // 1 hour
+        revalidate: 86400, // 1 day
+        expire: 604800, // 1 week
+      },
       biweekly: {
         stale: 60 * 60 * 24 * 14, // 14 days
-        revalidate: 60 * 60 * 24 * 7, // 7 day
+        revalidate: 60 * 60 * 24 * 7, // 7 days
         expire: 60 * 60 * 24 * 14, // 14 days
       },
     },
+    
+    // Performance optimizations
+    optimizePackageImports: [
+      '@radix-ui/react-icons',
+      '@heroicons/react',
+      'lucide-react',
+      'react-icons',
+    ],
+    
+    // Turbopack rules moved to stable config
   },
+  
+  // Turbopack configuration (stable in Next.js 15)
+  turbopack: {
+    rules: {
+      '*.svg': {
+        loaders: ['@svgr/webpack'],
+        as: '*.js',
+      },
+    },
+  },
+  
+  // Enhanced image optimization
   images: {
-    minimumCacheTTL: 86400, // 1 day in seconds
-    deviceSizes: [320, 640, 750, 828, 1080, 1200, 1920],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256],
+    minimumCacheTTL: 31536000, // 1 year
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     formats: ['image/avif', 'image/webp'],
-
-    unoptimized: false, // Set to true for unoptimized images
-    loader: 'default', // Use default Next.js image loader
-
+    dangerouslyAllowSVG: false,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
+    
     remotePatterns: [
       {
-        hostname: '**',
+        protocol: 'https',
+        hostname: '*.vercel-storage.com',
+      },
+      {
+        protocol: 'https', 
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
       },
     ],
   },
-
-  // ✅ Ignore ESLint and TypeScript errors during build
+  
+  // Bundle optimization
+  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Optimize chunks
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        cacheGroups: {
+          default: false,
+          vendors: false,
+          // Vendor chunk
+          vendor: {
+            name: 'vendor',
+            chunks: 'all',
+            test: /node_modules/,
+            priority: 20,
+          },
+          // Common chunk
+          common: {
+            minChunks: 2,
+            chunks: 'all',
+            enforce: true,
+            priority: 10,
+          },
+          // React chunk
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react',
+            chunks: 'all',
+            priority: 40,
+          },
+          // UI libraries chunk
+          ui: {
+            test: /[\\/]node_modules[\\/](@radix-ui|@heroicons|lucide-react)[\\/]/,
+            name: 'ui',
+            chunks: 'all',
+            priority: 30,
+          },
+        },
+      }
+    }
+    
+    // Exclude large files from bundle
+    config.module.rules.push({
+      test: /\.(jpg|jpeg|png|gif|webp|avif)$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/media/[name].[hash][ext]',
+      },
+    })
+    
+    return config
+  },
+  
+  // Output optimization (standalone disabled for Vercel)
+  // output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  
+  // Compile only what's needed
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+  
+  // Keep linter and typescript off as requested
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },
-  typescript: {
-    ignoreBuildErrors: true,
+  
+  // Performance budgets
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
   },
 }
 

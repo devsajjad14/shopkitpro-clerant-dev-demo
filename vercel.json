@@ -1,15 +1,63 @@
 {
   "version": 2,
-  "builds": [
+  "buildCommand": "npm run build",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "outputDirectory": ".next",
+  
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    },
+    "app/api/admin/media/assets/route.ts": {
+      "maxDuration": 60,
+      "memory": 1024
+    }
+  },
+  
+  "headers": [
     {
-      "src": "package.json",
-      "use": "@vercel/next"
+      "source": "/api/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "s-maxage=300, stale-while-revalidate=3600"
+        }
+      ]
+    },
+    {
+      "source": "/_next/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/media/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ],
-  "routes": [
+  
+  "redirects": [
     {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "source": "/demo-media/(.*)",
+      "destination": "/media/$1",
+      "permanent": true
     }
-  ]
+  ],
+  
+  "env": {
+    "NEXT_TELEMETRY_DISABLED": "1"
+  },
+  
+  "regions": ["iad1"],
+  
+  "ignoreCommand": "if [ $VERCEL_GIT_COMMIT_REF != main ]; then exit 1; fi"
 }
