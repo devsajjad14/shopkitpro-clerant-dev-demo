@@ -1456,6 +1456,3 @@ export const recoveryCampaigns = pgTable('recovery_campaigns', {
 // Type exports for Recovery Campaigns
 export type RecoveryCampaign = typeof recoveryCampaigns.$inferSelect
 export type NewRecoveryCampaign = typeof recoveryCampaigns.$inferInsert
-
-// Explicit export to ensure Vercel compatibility
-export { recoveryCampaigns }

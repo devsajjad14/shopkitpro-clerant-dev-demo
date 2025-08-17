@@ -898,7 +898,4 @@ export async function fixProductVariantAttributes(styleId?: string): Promise<Pro
       error: error instanceof Error ? error.message : 'Failed to fix product variant attributes' 
     }
   }
-}
-
-// Explicit exports for Vercel compatibility
-export { fixMissingVariantAttributes, fixProductVariantAttributes } 
+} 
