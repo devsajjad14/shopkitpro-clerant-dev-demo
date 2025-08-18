@@ -171,23 +171,24 @@ const nextConfig: NextConfig = {
   // Note: standalone mode disabled due to Windows symlink issues
   outputFileTracing: true,
   
-  // Exclude unnecessary files from serverless functions
-  outputFileTracingExcludes: {
-    '*': [
-      '.git/**/*',
-      '.next/cache/**/*',
-      'node_modules/@swc/**/*',
-      'node_modules/webpack/**/*',
-      'node_modules/terser/**/*',
-      'node_modules/@babel/**/*',
-      'node_modules/typescript/**/*',
-      'node_modules/eslint/**/*',
-      'node_modules/@types/**/*',
-      'public/uploads/**/*',
-      'public/images/prodimages/**/*',
-      'public/images/brands/**/*',
-    ],
-  },
+  // Exclude unnecessary files from being traced into serverless functions
+  outputFileTracingIgnores: [
+    '.git/**/*',
+    '.next/cache/**/*',
+    'node_modules/@swc/**/*',
+    'node_modules/webpack/**/*', 
+    'node_modules/terser/**/*',
+    'node_modules/@babel/**/*',
+    'node_modules/typescript/**/*',
+    'node_modules/eslint/**/*',
+    'node_modules/@types/**/*',
+    'public/uploads/**/*',
+    'public/images/prodimages/**/*',
+    'public/images/brands/**/*',
+    '*.md',
+    '*.txt',
+    'scripts/**/*'
+  ],
   
   
   // Compile only what's needed

@@ -56,20 +56,5 @@
     "NEXT_TELEMETRY_DISABLED": "1"
   },
   
-  "excludeFiles": [
-    ".next/cache/**",
-    "node_modules/@swc/**",
-    "node_modules/webpack/**",
-    "node_modules/@babel/**",
-    "node_modules/typescript/**",
-    "node_modules/@types/**",
-    "public/uploads/**",
-    "public/images/prodimages/**",
-    "*.md",
-    "*.txt",
-    ".git/**",
-    "scripts/**"
-  ],
-  
   "regions": ["iad1"]
 }
