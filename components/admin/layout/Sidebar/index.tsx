@@ -308,8 +308,8 @@ export function Sidebar({ className }: { className?: string }) {
             </NavGroup>
           </li>
 
-          {/* Media */}
-          <li>
+          {/* Media - Temporarily Disabled */}
+          {/* <li>
             <NavGroup
               icon={<FiImage />}
               title='Media'
@@ -330,10 +330,10 @@ export function Sidebar({ className }: { className?: string }) {
                 isOpen={isOpen}
               />
             </NavGroup>
-          </li>
+          </li> */}
 
-          {/* Data Manager */}
-          <li className='mt-8'>
+          {/* Data Manager - Temporarily Disabled */}
+          {/* <li className='mt-8'>
             <NavGroup
               icon={<FiLayers />}
               title='Data Manager'
@@ -360,7 +360,7 @@ export function Sidebar({ className }: { className?: string }) {
                 isOpen={isOpen}
               />
             </NavGroup>
-          </li>
+          </li> */}
 
 
            {/* Resetup Store */}

@@ -1,33 +1,40 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback, useMemo, Suspense, lazy } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
-  FiArrowLeft,
+  FiUpload, 
+  FiDatabase, 
+  FiFileText, 
+  FiCheckCircle, 
   FiAlertCircle,
   FiClock,
-  FiPlay,
-  FiPause,
-  FiRotateCcw,
+  FiRefreshCw,
+  FiToggleRight,
+  FiToggleLeft,
+  FiSettings,
   FiBarChart,
   FiTrendingUp,
   FiShield,
   FiZap,
-  FiDatabase,
-  FiUpload
+  FiArrowLeft,
+  FiPlay,
+  FiPause,
+  FiRotateCcw,
+  FiInfo,
+  FiTrash2,
+  FiX,
+  FiFolder,
+  FiFile,
+  FiChevronDown,
+  FiChevronRight,
+  FiPlus
 } from 'react-icons/fi'
+import { AutoSync } from '../../../../components/admin/data-manager/AutoSync'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { detectDeploymentEnvironment } from '@/lib/utils/deployment-detection'
-
-// Dynamic imports for heavy components
-const DataSourceSelection = lazy(() => import('./components/DataSourceSelection').then(module => ({ default: module.DataSourceSelection })))
-const SmartDataImporter = lazy(() => import('./components/SmartDataImporter').then(module => ({ default: module.SmartDataImporter })))
-const FileManagementSection = lazy(() => import('./components/FileManagementSection').then(module => ({ default: module.FileManagementSection })))
-const AutoSync = lazy(() => import('../../../../components/admin/data-manager/AutoSync').then(module => ({ default: module.AutoSync })))
-import { LoadingFallback } from './components/LoadingFallback'
 
 interface FileItem {
   name: string
@@ -1078,7 +1085,6 @@ export default function DataManagerImportPage() {
   const [rejectedFiles, setRejectedFiles] = useState<string[]>([])
   const [selectedDataSource, setSelectedDataSource] = useState<'local' | 'vercel'>('local')
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
-  const [deploymentEnv, setDeploymentEnv] = useState(detectDeploymentEnvironment())
   const [uploadMessage, setUploadMessage] = useState('')
   const [fileList, setFileList] = useState<FileItem[]>([])
   const [isLoadingFiles, setIsLoadingFiles] = useState(false)
@@ -1818,18 +1824,6 @@ export default function DataManagerImportPage() {
     initializeData()
   }, [])
 
-  // Deployment environment detection and auto-selection
-  useEffect(() => {
-    const env = detectDeploymentEnvironment()
-    setDeploymentEnv(env)
-    
-    // Auto-select Vercel storage on Vercel platform
-    if (env.platform === 'vercel' && selectedDataSource === 'local') {
-      console.log('🔍 Vercel deployment detected - auto-selecting Vercel Blob Storage')
-      setSelectedDataSource('vercel')
-    }
-  }, [])
-
   // Refresh data updater info intelligently - more frequent when update is due
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null
@@ -2563,45 +2557,38 @@ export default function DataManagerImportPage() {
           </div>
         </div>
 
-        {/* Data Source Selection Section */}
-        <Suspense fallback={<LoadingFallback height="h-64" message="Loading data source options..." />}>
-          <DataSourceSelection
-            selectedDataSource={selectedDataSource}
-            isUpdatingDataSource={isUpdatingDataSource}
-            isLoadingConfig={isLoadingConfig}
-            handleDataSourceChange={handleDataSourceChange}
-          />
-        </Suspense>
+        {/* Premium Data Source Selection Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className='relative group'
+        >
+          <div className='absolute inset-0 bg-gradient-to-br from-[#00437f]/5 via-transparent to-[#00437f]/5 rounded-2xl blur-2xl group-hover:blur-3xl transition-all duration-500'></div>
+          <Card className='relative p-8 border border-white/20 dark:border-gray-700/50 shadow-lg bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl rounded-xl hover:shadow-xl transition-all duration-300 group-hover:shadow-2xl'>
+            <div className='flex items-center gap-3 mb-8'>
+              <div className='p-3 bg-gradient-to-r from-[#00437f] to-[#003366] rounded-xl shadow-md'>
+                <FiDatabase className='w-6 h-6 text-white' />
+              </div>
+              <div>
+                <h2 className='text-2xl font-bold text-gray-900 dark:text-white'>
+                  Data Source Configuration
+                </h2>
+                <p className='text-gray-600 dark:text-gray-400'>
+                  Select your preferred data source location
+                </p>
+              </div>
+            </div>
 
-        <div className='space-y-8'>
-          {/* Smart Data Importer Section */}
-          <Suspense fallback={<LoadingFallback height="h-48" message="Loading data importer..." />}>
-            <SmartDataImporter
-              selectedDataSource={selectedDataSource}
-              selectedFiles={selectedFiles}
-              setSelectedFiles={setSelectedFiles}
-              importProgress={importProgress}
-              uploadStatus={uploadStatus}
-              uploadMessage={uploadMessage}
-              handleFileUpload={handleFileUpload}
-              handleUpload={handleUpload}
-              setShowFileTypeModal={setShowFileTypeModal}
-            />
-          </Suspense>
-               <DeploymentOverlay
-                 restrictedOnVercel={true}
-                 restrictedOnServer={false}
-                 restrictionTitle="Local Storage Restricted"
-                 restrictionMessage="Local Data-Db folder access requires server file system capabilities and is not available on Vercel Cloud deployments. Please use Vercel Blob Storage for cloud-compatible data management."
-                 allowDismiss={false}
+                         <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+               {/* Local Data-Db Folder Option */}
+               <motion.div
+                 initial={{ opacity: 0, x: -20 }}
+                 animate={{ opacity: 1, x: 0 }}
+                 transition={{ duration: 0.5, delay: 0.3 }}
+                 className='relative group/card'
                >
-                 <motion.div
-                   initial={{ opacity: 0, x: -20 }}
-                   animate={{ opacity: 1, x: 0 }}
-                   transition={{ duration: 0.5, delay: 0.3 }}
-                   className='relative group/card'
-                 >
-                   <div className='absolute inset-0 bg-gradient-to-br from-[#00437f]/5 via-transparent to-[#00437f]/5 rounded-xl blur-xl group-hover/card:blur-2xl transition-all duration-500'></div>
+                 <div className='absolute inset-0 bg-gradient-to-br from-[#00437f]/5 via-transparent to-[#00437f]/5 rounded-xl blur-xl group-hover/card:blur-2xl transition-all duration-500'></div>
                                    <div 
                     onClick={() => handleDataSourceChange('local')}
                     className={`relative p-6 bg-gradient-to-br from-white/90 to-white/70 dark:from-gray-800/90 dark:to-gray-800/70 backdrop-blur-xl rounded-xl border-2 transition-all duration-300 cursor-pointer group-hover/card:shadow-xl transform hover:scale-105 ${
@@ -2694,8 +2681,7 @@ export default function DataManagerImportPage() {
                       </div>
                     </div>
                   </div>
-                 </motion.div>
-               </DeploymentOverlay>
+               </motion.div>
 
                {/* Vercel Blob Data-Db Folder Option */}
                <motion.div
