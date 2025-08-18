@@ -113,8 +113,8 @@ const nextConfig: NextConfig = {
     ],
   },
   
-  // Output configuration for smaller serverless functions
-  output: 'standalone',
+  // Output configuration disabled due to Windows symlink issues
+  // output: 'standalone',
   
   // Bundle size optimization
   compiler: {
@@ -123,6 +123,12 @@ const nextConfig: NextConfig = {
 
   // Bundle optimization
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Disable cache in production to reduce build size
+    if (!dev) {
+      config.cache = false
+      config.infrastructureLogging = { level: 'error' }
+    }
+
     // Bundle analyzer
     if (process.env.ANALYZE === 'true') {
       const { BundleAnalyzerPlugin } = require('@next/bundle-analyzer')()
