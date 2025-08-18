@@ -35,6 +35,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import { DeploymentOverlay } from '@/components/ui/deployment-overlay'
+import { detectDeploymentEnvironment } from '@/lib/utils/deployment-detection'
 
 interface FileItem {
   name: string
@@ -1085,6 +1087,7 @@ export default function DataManagerImportPage() {
   const [rejectedFiles, setRejectedFiles] = useState<string[]>([])
   const [selectedDataSource, setSelectedDataSource] = useState<'local' | 'vercel'>('local')
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle')
+  const [deploymentEnv, setDeploymentEnv] = useState(detectDeploymentEnvironment())
   const [uploadMessage, setUploadMessage] = useState('')
   const [fileList, setFileList] = useState<FileItem[]>([])
   const [isLoadingFiles, setIsLoadingFiles] = useState(false)
@@ -1822,6 +1825,18 @@ export default function DataManagerImportPage() {
     
     fetchFiles()
     initializeData()
+  }, [])
+
+  // Deployment environment detection and auto-selection
+  useEffect(() => {
+    const env = detectDeploymentEnvironment()
+    setDeploymentEnv(env)
+    
+    // Auto-select Vercel storage on Vercel platform
+    if (env.platform === 'vercel' && selectedDataSource === 'local') {
+      console.log('🔍 Vercel deployment detected - auto-selecting Vercel Blob Storage')
+      setSelectedDataSource('vercel')
+    }
   }, [])
 
   // Refresh data updater info intelligently - more frequent when update is due
@@ -2582,13 +2597,20 @@ export default function DataManagerImportPage() {
 
                          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                {/* Local Data-Db Folder Option */}
-               <motion.div
-                 initial={{ opacity: 0, x: -20 }}
-                 animate={{ opacity: 1, x: 0 }}
-                 transition={{ duration: 0.5, delay: 0.3 }}
-                 className='relative group/card'
+               <DeploymentOverlay
+                 restrictedOnVercel={true}
+                 restrictedOnServer={false}
+                 restrictionTitle="Local Storage Restricted"
+                 restrictionMessage="Local Data-Db folder access requires server file system capabilities and is not available on Vercel Cloud deployments. Please use Vercel Blob Storage for cloud-compatible data management."
+                 allowDismiss={false}
                >
-                 <div className='absolute inset-0 bg-gradient-to-br from-[#00437f]/5 via-transparent to-[#00437f]/5 rounded-xl blur-xl group-hover/card:blur-2xl transition-all duration-500'></div>
+                 <motion.div
+                   initial={{ opacity: 0, x: -20 }}
+                   animate={{ opacity: 1, x: 0 }}
+                   transition={{ duration: 0.5, delay: 0.3 }}
+                   className='relative group/card'
+                 >
+                   <div className='absolute inset-0 bg-gradient-to-br from-[#00437f]/5 via-transparent to-[#00437f]/5 rounded-xl blur-xl group-hover/card:blur-2xl transition-all duration-500'></div>
                                    <div 
                     onClick={() => handleDataSourceChange('local')}
                     className={`relative p-6 bg-gradient-to-br from-white/90 to-white/70 dark:from-gray-800/90 dark:to-gray-800/70 backdrop-blur-xl rounded-xl border-2 transition-all duration-300 cursor-pointer group-hover/card:shadow-xl transform hover:scale-105 ${
@@ -2681,7 +2703,8 @@ export default function DataManagerImportPage() {
                       </div>
                     </div>
                   </div>
-               </motion.div>
+                 </motion.div>
+               </DeploymentOverlay>
 
                {/* Vercel Blob Data-Db Folder Option */}
                <motion.div

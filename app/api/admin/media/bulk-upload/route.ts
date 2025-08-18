@@ -112,7 +112,7 @@ export async function GET() {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     supportedCategories: VALID_CATEGORIES,
-    maxFileSize: '50MB',
-    batchSize: 3
+    maxFileSize: 'unlimited',
+    batchSize: 'unlimited'
   })
 }

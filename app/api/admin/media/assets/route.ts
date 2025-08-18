@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { readdir, stat } from 'fs/promises'
-import { join } from 'path'
+import { join, extname } from 'path'
 import { existsSync } from 'fs'
 import { list } from '@vercel/blob'
 
@@ -64,8 +64,8 @@ const MEDIA_EXTENSIONS = [
  * Enterprise-optimized media asset discovery with pagination and streaming
  * Query params:
  * - platform: 'vercel' | 'server' | auto-detect
- * - page: number (default: 1)
- * - limit: number (default: 50, max: 100)
+ * - page: number (default: 1) 
+ * - limit: number (default: 0 for unlimited, any positive number for pagination)
  * - category: string (optional filter)
  * - search: string (optional filename search)
  */
@@ -73,10 +73,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     
-    // Pagination parameters
+    // Pagination parameters - support unlimited files
     const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
-    const limit = Math.min(100, Math.max(10, parseInt(searchParams.get('limit') || '50')))
-    const offset = (page - 1) * limit
+    const requestedLimit = parseInt(searchParams.get('limit') || '0')
+    // If limit is 0 or very high, return ALL files (unlimited support)
+    const limit = requestedLimit === 0 || requestedLimit > 50000 ? Number.MAX_SAFE_INTEGER : Math.max(10, requestedLimit)
+    const offset = limit === Number.MAX_SAFE_INTEGER ? 0 : (page - 1) * limit
     
     // Filter parameters
     const categoryFilter = searchParams.get('category')
@@ -115,10 +117,10 @@ export async function GET(request: Request) {
         console.log('🔍 Discovering Vercel blob assets...')
         const assets: MediaAsset[] = []
         
-        // Get blobs with pagination to avoid memory issues
-        console.log(`🔍 Getting blobs (limit: ${limit * 2})...`)
+        // Get ALL blobs without any limits - unlimited file support
+        console.log(`🔍 Getting ALL blobs without limits...`)
         const { blobs: allBlobs } = await list({ 
-          limit: Math.min(1000, limit * 10), // Get more than needed for filtering
+          // No limit - get absolutely ALL files
           prefix: categoryFilter ? `${VERCEL_FOLDERS[categoryFilter as keyof typeof VERCEL_FOLDERS]}/` : undefined
         })
         
@@ -149,10 +151,10 @@ export async function GET(request: Request) {
           try {
             console.log(`🔍 Scanning Vercel folder: ${folderPath}`)
             
-            // List blobs with category prefix and reasonable limit
+            // List blobs with category prefix - NO LIMITS for unlimited file support
             const { blobs } = await list({ 
-              prefix: `${folderPath}/`, 
-              limit: Math.min(500, limit * 5) // Dynamic limit based on page size
+              prefix: `${folderPath}/`
+              // No limit - support unlimited files per category
             })
             
             console.log(`📸 Found ${blobs.length} blobs in ${category} folder (${folderPath})`)
@@ -165,12 +167,17 @@ export async function GET(request: Request) {
                 // Extract filename from blob pathname
                 const versionedFilename = blob.pathname.split('/').pop() || 'unknown'
                 
-                // Check if it's a media file
-                const ext = versionedFilename.substring(versionedFilename.lastIndexOf('.'))
-                if (!MEDIA_EXTENSIONS.includes(ext as any)) {
-                  console.log(`  ❌ Skipping non-media file: ${versionedFilename}`)
+                // Show ALL files regardless of extension for admin interface
+                const ext = extname(versionedFilename)
+                
+                // Skip only system/hidden files
+                if (versionedFilename.startsWith('.') || versionedFilename.startsWith('~') || 
+                    versionedFilename === 'Thumbs.db' || versionedFilename === 'desktop.ini') {
+                  console.log(`  ❌ Skipping system/hidden file: ${versionedFilename}`)
                   continue
                 }
+                
+                console.log(`  ✅ Including file: ${versionedFilename} (ext: ${ext})`)
                 
                 // Extract original filename from versioned filename
                 // Pattern: basename_vTIMESTAMP_RANDOM.ext -> basename.ext
@@ -227,7 +234,7 @@ export async function GET(request: Request) {
                 id: `${category}_${versionedFilename}_${latestBlob.uploadedAt.getTime()}`,
                 filename: displayFilename,
                 url: latestBlob.url,
-                type: ext.substring(1).toLowerCase(),
+                type: ext.substring(1).toLowerCase() || 'unknown',
                 size: latestBlob.size,
                 category,
                 uploadedAt: latestBlob.uploadedAt
@@ -383,21 +390,26 @@ export async function GET(request: Request) {
         const files = await readdir(categoryPath)
         console.log(`📋 ALL files found in ${category}:`, files)
         
+        // Show ALL files regardless of extension for admin interface
         const mediaFiles = files.filter(file => {
-          const ext = file.substring(file.lastIndexOf('.'))
-          const isMedia = MEDIA_EXTENSIONS.includes(ext as any)
-          console.log(`  - ${file} (ext: ${ext}) -> ${isMedia ? '✅ MEDIA' : '❌ NOT MEDIA'}`)
-          return isMedia
+          // Skip hidden files and system files
+          if (file.startsWith('.') || file.startsWith('~') || file === 'Thumbs.db' || file === 'desktop.ini') {
+            console.log(`  - ${file} -> ❌ SYSTEM/HIDDEN FILE`)
+            return false
+          }
+          
+          const ext = extname(file)
+          console.log(`  - ${file} (ext: ${ext}) -> ✅ INCLUDED`)
+          return true
         })
 
-        console.log(`📸 FINAL: Found ${mediaFiles.length} valid media files in ${category}:`, mediaFiles)
+        console.log(`📸 FINAL: Found ${mediaFiles.length} files in ${category}:`, mediaFiles)
         
         if (mediaFiles.length === 0 && files.length > 0) {
-          console.log(`⚠️  WARNING: ${category} has ${files.length} files but 0 media files - check file extensions!`)
-          console.log(`📋 Non-media files in ${category}:`, files.filter(file => {
-            const ext = file.substring(file.lastIndexOf('.'))
-            return !MEDIA_EXTENSIONS.includes(ext as any)
-          }))
+          console.log(`⚠️  WARNING: ${category} has ${files.length} files but 0 are being shown - check system/hidden file filters!`)
+          console.log(`📋 Hidden/system files in ${category}:`, files.filter(file => 
+            file.startsWith('.') || file.startsWith('~') || file === 'Thumbs.db' || file === 'desktop.ini'
+          ))
         }
 
         // Process each media file
@@ -414,7 +426,7 @@ export async function GET(request: Request) {
               id: `${category}_${filename}_${fileStats.mtimeMs}`,
               filename,
               url: assetUrl,
-              type: filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(),
+              type: extname(filename).substring(1).toLowerCase() || 'unknown',
               size: fileStats.size,
               category,
               uploadedAt: fileStats.mtime

@@ -170,7 +170,7 @@ async function uploadToVercelMedia(
     
     // Additional verification: check if new upload is available
     try {
-      const { blobs: newBlobs } = await list({ prefix: blobPath, limit: 1 })
+      const { blobs: newBlobs } = await list({ prefix: blobPath })
       if (newBlobs.length > 0) {
         const newBlobUrl = newBlobs[0].url
         console.log(`✅ New upload verified, blob URL: ${newBlobUrl}`)
@@ -275,23 +275,15 @@ export async function uploadMediaFiles(
   
   const results: MediaUploadResult[] = []
   
-  // Process files with controlled concurrency
-  const BATCH_SIZE = 3
-  for (let i = 0; i < files.length; i += BATCH_SIZE) {
-    const batch = files.slice(i, i + BATCH_SIZE)
-    
-    const batchPromises = batch.map(({ file, category }) => 
-      uploadMediaFile(file, category, forcePlatform, isReplacement)
-    )
-    
-    const batchResults = await Promise.all(batchPromises)
-    results.push(...batchResults)
-    
-    // Small delay between batches
-    if (i + BATCH_SIZE < files.length) {
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-  }
+  // Process ALL files simultaneously - no limits or batch processing
+  console.log(`🚀 Processing ${files.length} files simultaneously (unlimited concurrency)`)
+  
+  const allPromises = files.map(({ file, category }) => 
+    uploadMediaFile(file, category, forcePlatform, isReplacement)
+  )
+  
+  const allResults = await Promise.all(allPromises)
+  results.push(...allResults)
   
   const stats = {
     total: results.length,

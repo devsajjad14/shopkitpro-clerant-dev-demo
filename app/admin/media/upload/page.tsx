@@ -57,7 +57,6 @@ interface UploadCategory {
   gradient: string
   description: string
   subtitle: string
-  maxFiles: number
   acceptedTypes: string[]
   examples: string[]
 }
@@ -112,7 +111,15 @@ const CATEGORY_ASSET_MAPPING: Record<string, AssetType> = {
   'pages': 'page',
 } as const
 
-// Enterprise-grade upload categories with enhanced metadata
+// Comprehensive list of all image formats
+const ALL_IMAGE_TYPES = [
+  'image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/avif', 'image/heic', 'image/heif', 'image/bmp', 'image/tiff', 'image/tif',
+  'image/ico', 'image/icon', 'image/x-icon', 'image/vnd.microsoft.icon',
+  'image/apng', 'image/jxl', 'image/jp2', 'image/jpx', 'image/jpm'
+]
+
+// Enterprise-grade upload categories - now accept ALL image types
 const uploadCategories: UploadCategory[] = [
   {
     id: 'products',
@@ -122,8 +129,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-[#00437f] to-[#003366]',
     description: 'Upload Product Images',
     subtitle: 'upload bulk products images from here',
-    maxFiles: 100,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['Product photos', 'Gallery images', 'Zoom details']
   },
   {
@@ -134,8 +140,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-[#00437f] to-[#003366]',
     description: 'Upload Main Banner Images',
     subtitle: 'Upload bulk Main Banner image from here',
-    maxFiles: 10,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['Section headers', 'Category banners', 'Feature highlights'],
   },
   {
@@ -146,8 +151,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-[#00437f] to-[#003366]',
     description: 'Upload Mini Banner Images',
     subtitle: 'Upload bulk Mini Banner image from here',
-    maxFiles: 20,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['CTA buttons', 'Small promos', 'Badge banners']
   },
   {
@@ -158,8 +162,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-[#00437f] to-[#003366]',
     description: 'Upload Brand Images',
     subtitle: 'Upload bulk brand logo images from here',
-    maxFiles: 15,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['Company logos', 'Partner brands', 'Certification badges']
   },
   {
@@ -170,8 +173,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-gray-600 to-gray-800',
     description: 'Upload Site Resource Images',
     subtitle: 'upload site resources like logo, icons from here',
-    maxFiles: 25,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/svg+xml', 'image/webp', 'image/ico'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['Site icons', 'Backgrounds', 'UI elements']
   },
   {
@@ -182,8 +184,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-[#00437f] to-[#003366]',
     description: 'Upload User Profile Images',
     subtitle: 'upload bulk User profiles images from here',
-    maxFiles: 200,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['Profile avatars', 'Team photos', 'User galleries']
   },
   {
@@ -194,8 +195,7 @@ const uploadCategories: UploadCategory[] = [
     gradient: 'from-[#00437f] to-[#003366]',
     description: 'Upload Page Resource Images',
     subtitle: 'upload page resources like hero images, about us from here',
-    maxFiles: 50,
-    acceptedTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/svg+xml'],
+    acceptedTypes: ALL_IMAGE_TYPES,
     examples: ['Hero images', 'About us photos', 'Content images']
   }
 ]
@@ -340,6 +340,7 @@ export default function MediaManagerPage() {
   
   // Media library state
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([])
+  const [mediaStats, setMediaStats] = useState<{ categories: Record<string, number> } | null>(null)
   const [isLoadingAssets, setIsLoadingAssets] = useState(false)
   
   // Upload popup state
@@ -499,8 +500,8 @@ export default function MediaManagerPage() {
       console.log('📡 Fetching media assets from API...')
       console.log('🔄 Using platform:', selectedPlatform)
       
-      // Pass the selected platform to the API
-      const response = await fetch(`/api/admin/media/assets?platform=${selectedPlatform}`)
+      // Pass the selected platform to the API with NO LIMITS to get ALL files
+      const response = await fetch(`/api/admin/media/assets?platform=${selectedPlatform}&limit=0`)
       
       if (!response.ok) {
         const errorText = await response.text()
@@ -516,6 +517,7 @@ export default function MediaManagerPage() {
       }
       
       setMediaAssets(data.assets || [])
+      setMediaStats(data.stats || null)
       
       // Convert to legacy format for compatibility
       const legacyFiles: UploadedFile[] = (data.assets || []).map((asset: MediaAsset) => ({
@@ -558,11 +560,7 @@ export default function MediaManagerPage() {
     const filesArray = Array.from(files)
     const currentCategoryFiles = uploadedFiles.filter(f => f.category === category).length
     
-    // Professional validation
-    if (currentCategoryFiles + filesArray.length > categoryConfig.maxFiles) {
-      toast.error(`Maximum ${categoryConfig.maxFiles} files allowed for ${categoryConfig.name}`)
-      return
-    }
+    // Removed file limit restrictions - allow unlimited files
 
     // Validate each file
     const validFiles: File[] = []
@@ -1515,7 +1513,16 @@ export default function MediaManagerPage() {
     event.target.value = ''
   }, [handleDirectUpload])
 
-  // Professional file filtering and sorting
+  // Get accurate file count from API stats instead of filtered limited results
+  const getAccurateFileCount = useCallback((categoryId: string) => {
+    if (mediaStats?.categories) {
+      return mediaStats.categories[categoryId] || 0
+    }
+    // Fallback to filtered files for backward compatibility
+    return uploadedFiles.filter(f => f.category === categoryId && f.status === 'success').length
+  }, [mediaStats, uploadedFiles])
+
+  // Professional file filtering and sorting (for display only, not counting)
   const getFilteredFiles = useCallback((categoryId: string) => {
     let files = uploadedFiles.filter(f => f.category === categoryId && f.status === 'success')
     
@@ -1826,8 +1833,9 @@ export default function MediaManagerPage() {
                       {/* Category folders */}
                       {uploadCategories.map((category, index) => {
                         const categoryFiles = getFilteredFiles(category.id)
+                        const accurateCount = getAccurateFileCount(category.id)
                         const isExpanded = expandedFolders.has(category.id)
-                        const hasFiles = categoryFiles.length > 0
+                        const hasFiles = accurateCount > 0
                         
                         return (
                           <motion.div
@@ -1862,11 +1870,11 @@ export default function MediaManagerPage() {
                               </div>
                               <span className="text-sm font-medium">{category.folder.split('/').pop()}/</span>
                               
-                              {/* File count */}
+                              {/* File count - using accurate count from API stats */}
                               <div className="flex items-center gap-2 ml-auto">
                                 {hasFiles && (
                                   <Badge variant="secondary" className="text-xs">
-                                    {categoryFiles.length} files
+                                    {accurateCount} files
                                   </Badge>
                                 )}
                                 {!hasFiles && (
@@ -2575,22 +2583,15 @@ const CategoryUploadCard = ({
                   )}
                 </div>
                 
-                {/* File count and progress */}
-                <div className="flex items-center justify-center gap-3 text-sm">
-                  <span className="text-gray-500 dark:text-gray-400">
-                    {files.length}/{category.maxFiles} files
-                  </span>
-                  <div className="w-20 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-[#00437f] transition-all duration-500 rounded-full"
-                      style={{ width: `${Math.min((files.length / category.maxFiles) * 100, 100)}%` }}
-                    />
-                  </div>
-                  {files.length > 0 && (
+                {/* File count */}
+                <div className="flex items-center justify-center text-sm">
+                  {files.length > 0 ? (
                     <Badge className="bg-green-500 text-white text-xs">
                       <FiCheck className="h-2.5 w-2.5 mr-1" />
-                      {files.filter(f => f.status === 'success').length}
+                      {files.filter(f => f.status === 'success').length} files
                     </Badge>
+                  ) : (
+                    <span className="text-gray-400 text-xs">0 files</span>
                   )}
                 </div>
               </div>
