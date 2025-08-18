@@ -113,8 +113,26 @@ const nextConfig: NextConfig = {
     ],
   },
   
+  // Output configuration for smaller serverless functions
+  output: 'standalone',
+  
+  // Bundle size optimization
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production',
+  },
+
   // Bundle optimization
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
+    // Bundle analyzer
+    if (process.env.ANALYZE === 'true') {
+      const { BundleAnalyzerPlugin } = require('@next/bundle-analyzer')()
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'server',
+          openAnalyzer: true,
+        })
+      )
+    }
     // Optimize chunks
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
@@ -162,6 +180,40 @@ const nextConfig: NextConfig = {
         filename: 'static/media/[name].[hash][ext]',
       },
     })
+
+    // Optimize for serverless functions
+    if (isServer) {
+      // Exclude heavy client-side dependencies from server bundle
+      config.externals = config.externals || []
+      config.externals.push({
+        'framer-motion': 'commonjs framer-motion',
+        'react-icons/fi': 'commonjs react-icons/fi',
+      })
+
+      // Optimize API route chunks
+      config.optimization = config.optimization || {}
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          // Separate API routes
+          api: {
+            test: /[\\/]app[\\/]api[\\/]/,
+            name: 'api-common',
+            chunks: 'all',
+            priority: 50,
+            minChunks: 2,
+          },
+          // Database operations
+          database: {
+            test: /[\\/](lib[\\/]db|data-manager)[\\/]/,
+            name: 'database',
+            chunks: 'all',
+            priority: 60,
+          },
+        },
+      }
+    }
     
     return config
   },
