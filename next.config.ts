@@ -74,6 +74,24 @@ const nextConfig: NextConfig = {
       'react-icons',
     ],
     
+    // Exclude unnecessary files from serverless functions
+    outputFileTracingExcludes: {
+      '*': [
+        '.git/**/*',
+        '.next/cache/**/*',
+        'node_modules/@swc/**/*',
+        'node_modules/webpack/**/*',
+        'node_modules/terser/**/*',
+        'node_modules/@babel/**/*',
+        'node_modules/typescript/**/*',
+        'node_modules/eslint/**/*',
+        'node_modules/@types/**/*',
+        'public/uploads/**/*',
+        'public/images/prodimages/**/*',
+        'public/images/brands/**/*',
+      ],
+    },
+    
     // Turbopack rules moved to stable config
   },
   
@@ -166,8 +184,10 @@ const nextConfig: NextConfig = {
     return config
   },
   
-  // Output optimization (standalone disabled for Vercel)
-  // output: process.env.NODE_ENV === 'production' ? 'standalone' : undefined,
+  // Output optimization for Vercel function size reduction
+  output: 'standalone',
+  outputFileTracing: true,
+  
   
   // Compile only what's needed
   compiler: {
