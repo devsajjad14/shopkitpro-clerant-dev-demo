@@ -123,10 +123,14 @@ const nextConfig: NextConfig = {
 
   // Bundle optimization
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Disable cache in production to reduce build size
-    if (!dev) {
-      config.cache = false
-      config.infrastructureLogging = { level: 'error' }
+    // Aggressively disable all caching to prevent size issues
+    config.cache = false
+    config.infrastructureLogging = { level: 'error' }
+    
+    // Force clean build without any caching
+    if (config.optimization) {
+      config.optimization.usedExports = false
+      config.optimization.sideEffects = false
     }
 
     // Bundle analyzer

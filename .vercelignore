@@ -7,8 +7,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .next/cache
+.next/cache/**/*
 node_modules/.cache
 .vercel/cache
+# Webpack cache specifically
+.next/cache/webpack
+.next/cache/webpack/**/*
 
 # Development configuration
 .env.local
