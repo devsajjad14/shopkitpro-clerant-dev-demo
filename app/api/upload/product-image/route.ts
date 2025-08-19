@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { put, del, list } from '@vercel/blob'
-import sharp from 'sharp'
+// import sharp from 'sharp' // Removed to reduce function size
 import { generateImagePaths, randomTenDigitString } from '@/lib/utils/image-utils'
 
 // Helper function to ensure products directory exists
@@ -101,35 +101,10 @@ export async function POST(request: Request) {
 
     if (isAlternate) {
       // Only one image for alternate images (no resizing)
-      imageBuffers = [await sharp(buffer).jpeg({ quality: 90 }).toBuffer()]
+      imageBuffers = [buffer]
     } else {
-      // Three sizes for main images
-      imageBuffers = await Promise.all([
-        // Large image (original size, max 1200px)
-        sharp(buffer)
-          .resize(1200, 1200, {
-            fit: 'inside',
-            withoutEnlargement: true,
-          })
-          .jpeg({ quality: 90 })
-          .toBuffer(),
-        // Medium image (300px)
-        sharp(buffer)
-          .resize(300, 300, {
-            fit: 'inside',
-            withoutEnlargement: true,
-          })
-          .jpeg({ quality: 85 })
-          .toBuffer(),
-        // Small image (180px)
-        sharp(buffer)
-          .resize(180, 180, {
-            fit: 'inside',
-            withoutEnlargement: true,
-          })
-          .jpeg({ quality: 80 })
-          .toBuffer(),
-      ])
+      // Use original buffer for all sizes to reduce function size
+      imageBuffers = [buffer, buffer, buffer]
     }
 
     // Upload to Vercel Blob with proper directory structure

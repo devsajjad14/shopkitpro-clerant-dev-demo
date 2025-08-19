@@ -1,2 +1,51 @@
+# Build caches and artifacts
+.next/cache/
+.next/trace
+.next/static/chunks/**/*.map
+node_modules/.cache/
+tsconfig.tsbuildinfo
+dev.log
+
+# Demo and development data
+demo-data/
+data-db/
+demo-media/
+
+# Local media uploads (use Vercel Blob instead)
+public/uploads/
+media/
+
+# Development scripts and database
+scripts/
+drizzle/
+prisma/
+
+# Development configs
+eslint.config.mjs
+tailwind.config.js
+postcss.config.js
+postcss.config.mjs
 pnpm-workspace.yaml
 packages/
+
+# Package management
+package-lock.json
+pnpm-lock.yaml
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+
+# Logs and temporary files
+**/*.log
+**/*.map
+cleanup-sql.sql
+
+# Source files (TypeScript already compiled)
+src/

@@ -112,22 +112,86 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+
+  // Advanced output file tracing for function size optimization
+  outputFileTracingExcludes: {
+    '*': [
+      'node_modules/@swc/core-linux-x64-gnu',
+      'node_modules/@swc/core-linux-x64-musl',
+      'node_modules/@esbuild/linux-x64',
+      'node_modules/@next/swc-linux-x64-gnu',
+      'node_modules/@next/swc-linux-x64-musl',
+      'node_modules/sharp/vendor/**',
+      'node_modules/canvas/**',
+      'node_modules/puppeteer/**',
+      'node_modules/playwright/**',
+      'node_modules/**/*.md',
+      'node_modules/**/*.txt',
+      'node_modules/**/test/**',
+      'node_modules/**/tests/**',
+      'node_modules/**/__tests__/**',
+      'node_modules/**/docs/**',
+      'node_modules/**/example/**',
+      'node_modules/**/examples/**',
+      'node_modules/**/coverage/**',
+      'node_modules/**/.nyc_output/**',
+      'node_modules/**/bench/**',
+      'node_modules/**/benchmark/**',
+      'demo-data/**',
+      'data-db/**',
+      'demo-media/**',
+      'public/uploads/**',
+      'scripts/**',
+      'drizzle/**',
+      'prisma/**',
+    ],
+  },
+
+  outputFileTracingIncludes: {
+    '/api/**/*': ['./lib/**/*', './types/**/*', './utils/**/*'],
+  },
   
   // Bundle optimization
   webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Optimize chunks
+    // Optimize chunks for client-side only
     if (!dev && !isServer) {
       config.optimization.splitChunks = {
         chunks: 'all',
+        maxSize: 244000, // ~240KB chunks
         cacheGroups: {
           default: false,
           vendors: false,
+          // React chunk
+          react: {
+            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
+            name: 'react',
+            chunks: 'all',
+            priority: 40,
+            enforce: true,
+          },
+          // UI libraries chunk
+          ui: {
+            test: /[\\/]node_modules[\\/](@radix-ui|@heroicons|lucide-react)[\\/]/,
+            name: 'ui',
+            chunks: 'all',
+            priority: 30,
+            enforce: true,
+          },
+          // Charts and visualization
+          charts: {
+            test: /[\\/]node_modules[\\/](chart\.js|recharts|react-chartjs-2)[\\/]/,
+            name: 'charts',
+            chunks: 'all',
+            priority: 25,
+            enforce: true,
+          },
           // Vendor chunk
           vendor: {
             name: 'vendor',
             chunks: 'all',
             test: /node_modules/,
             priority: 20,
+            enforce: true,
           },
           // Common chunk
           common: {
@@ -136,22 +200,21 @@ const nextConfig: NextConfig = {
             enforce: true,
             priority: 10,
           },
-          // React chunk
-          react: {
-            test: /[\\/]node_modules[\\/](react|react-dom)[\\/]/,
-            name: 'react',
-            chunks: 'all',
-            priority: 40,
-          },
-          // UI libraries chunk
-          ui: {
-            test: /[\\/]node_modules[\\/](@radix-ui|@heroicons|lucide-react)[\\/]/,
-            name: 'ui',
-            chunks: 'all',
-            priority: 30,
-          },
         },
       }
+    }
+    
+    // Server-side bundle size optimization
+    if (isServer) {
+      // Exclude unnecessary packages from server bundle
+      config.externals = [...(config.externals || []), {
+        'canvas': 'canvas',
+        'sharp': 'sharp',
+        '@next/font': '@next/font',
+      }]
+      
+      // Minimize server bundle
+      config.optimization.minimize = true
     }
     
     // Exclude large files from bundle
@@ -162,6 +225,17 @@ const nextConfig: NextConfig = {
         filename: 'static/media/[name].[hash][ext]',
       },
     })
+    
+    // Add bundle analyzer in development
+    if (process.env.ANALYZE === 'true') {
+      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
+      config.plugins.push(
+        new BundleAnalyzerPlugin({
+          analyzerMode: 'static',
+          openAnalyzer: false,
+        })
+      )
+    }
     
     return config
   },

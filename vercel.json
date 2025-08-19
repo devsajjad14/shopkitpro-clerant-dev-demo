@@ -9,10 +9,66 @@
       "maxDuration": 30
     },
     "app/api/admin/media/assets/route.ts": {
-      "maxDuration": 60,
-      "memory": 1024
+      "maxDuration": 60
+    },
+    "app/api/admin/media/bulk-upload/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/admin/media/upload-to-vercel/route.ts": {
+      "maxDuration": 60
+    },
+    "app/api/data-manager/**/*.ts": {
+      "maxDuration": 60
+    },
+    "app/api/upload/**/*.ts": {
+      "maxDuration": 45
     }
   },
+  
+  "excludeFiles": [
+    ".next/cache/**",
+    ".next/trace",
+    ".next/static/chunks/**/*.map",
+    "node_modules/.cache/**",
+    "node_modules/**/*.md",
+    "node_modules/**/*.txt",
+    "node_modules/**/test/**",
+    "node_modules/**/tests/**",
+    "node_modules/**/__tests__/**",
+    "node_modules/**/docs/**",
+    "node_modules/**/example/**",
+    "node_modules/**/examples/**",
+    "node_modules/**/coverage/**",
+    "node_modules/**/.nyc_output/**",
+    "node_modules/**/bench/**",
+    "node_modules/**/benchmark/**",
+    "**/*.log",
+    "**/*.map",
+    "**/tsconfig.tsbuildinfo",
+    "dev.log",
+    "cleanup-sql.sql",
+    "demo-data/**",
+    "data-db/**",
+    "demo-media/**",
+    "public/uploads/**",
+    "scripts/**",
+    "src/**",
+    "drizzle/**",
+    "prisma/**",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "eslint.config.mjs",
+    "tailwind.config.js",
+    "postcss.config.js",
+    "postcss.config.mjs",
+    "pnpm-workspace.yaml",
+    "package-lock.json",
+    "pnpm-lock.yaml"
+  ],
   
   "headers": [
     {
@@ -35,6 +91,15 @@
     },
     {
       "source": "/media/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/uploads/(.*)",
       "headers": [
         {
           "key": "Cache-Control",

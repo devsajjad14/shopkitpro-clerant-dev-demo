@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { put, del, list } from '@vercel/blob'
-import sharp from 'sharp'
 import { randomTenDigitString } from '@/lib/utils/image-utils'
 
 // Helper function to ensure main-banners directory exists
@@ -71,14 +70,8 @@ export async function POST(request: Request) {
     const sanitizedBannerName = bannerName.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase()
     const imagePath = `main-banners/${sanitizedBannerName}_${uniqueId}.jpg`
 
-    // Process image with Sharp
-    const processedBuffer = await sharp(buffer)
-      .resize(1200, 400, { 
-        fit: 'cover',
-        position: 'center'
-      })
-      .jpeg({ quality: 85 })
-      .toBuffer()
+    // Use original buffer to avoid Sharp dependency in serverless functions
+    const processedBuffer = buffer
 
     // Upload to Vercel Blob
     const blob = await put(imagePath, processedBuffer, {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { put, del, list } from '@vercel/blob'
-import sharp from 'sharp'
+// import sharp from 'sharp' // Removed to reduce function size
 
 // Helper function to ensure users directory exists
 async function ensureUsersDirectory() {
@@ -66,14 +66,8 @@ export async function POST(request: Request) {
     // Generate file path
     const filePath = generateUserProfilePath(file.name)
     
-    // Process image: Resize to max 300x300px while maintaining aspect ratio
-    const processedBuffer = await sharp(buffer)
-      .resize(300, 300, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .jpeg({ quality: 90 })
-      .toBuffer()
+    // Use original buffer to avoid Sharp dependency
+    const processedBuffer = buffer
 
     // Upload to Vercel Blob
     console.log(`Uploading user profile to: ${filePath}`)

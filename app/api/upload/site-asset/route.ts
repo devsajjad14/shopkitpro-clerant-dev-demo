@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { put, del, list } from '@vercel/blob'
-import sharp from 'sharp'
+// import sharp from 'sharp' // Removed to reduce function size
 
 // Helper function to ensure site directory exists
 async function ensureSiteDirectory() {
@@ -63,25 +63,8 @@ export async function POST(request: Request) {
     // Process image based on type
     let processedBuffer: Buffer
     
-    if (type === 'logo') {
-      // Logo: Resize to max 200x200px while maintaining aspect ratio
-      processedBuffer = await sharp(buffer)
-        .resize(200, 200, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 90 })
-        .toBuffer()
-    } else {
-      // Favicon: Resize to 32x32px
-      processedBuffer = await sharp(buffer)
-        .resize(32, 32, {
-          fit: 'inside',
-          withoutEnlargement: true
-        })
-        .jpeg({ quality: 85 })
-        .toBuffer()
-    }
+    // Use original buffer to avoid Sharp dependency
+    processedBuffer = buffer
 
     // Upload to Vercel Blob
     console.log(`Uploading ${type} to: ${filePath}`)
