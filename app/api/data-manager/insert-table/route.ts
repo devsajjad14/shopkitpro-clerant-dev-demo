@@ -3,15 +3,57 @@ import { readFile } from 'fs/promises'
 import { join } from 'path'
 import { db } from '@/lib/db'
 import { eq, count } from 'drizzle-orm'
-import {
-  accounts, products, categories, orders, customers, taxonomy,
-  attributes, attributeValues, brands, settings, reviews, addresses, users, sessions, userProfiles, verificationTokens, productVariations, productAlternateImages, productAttributes, variantAttributes, taxRates, orderItems, refunds, coupons, adminUsers, shippingMethods, apiIntegrations, discounts, paymentGateways, paymentSettings, paymentTransactionLogs, paymentGatewayHealthChecks, dataModeSettings, mainBanners, mini_banners, pages, pageRevisions, pageCategories, pageCategoryRelations, pageAnalytics, cartAbandonmentToggle, cartSessions, cartEvents, cartsRecovered, campaignEmails
-} from '@/lib/db/schema'
+// Import only core schemas to reduce bundle size
+import * as schema from '@/lib/db/schema'
 
-// Table mapping for insertion
-const tableMap: Record<string, any> = {
-  users, categories, taxonomy, brands, settings, taxRates, shippingMethods, adminUsers, apiIntegrations, paymentGateways, paymentSettings, dataModeSettings, mainBanners, mini_banners, pages, pageCategories, cartAbandonmentToggle, customers, verificationTokens, accounts, sessions, userProfiles, addresses, coupons, discounts, attributes, attributeValues, products, orders, refunds, cartSessions, cartEvents, cartsRecovered, campaignEmails, paymentTransactionLogs, paymentGatewayHealthChecks, productVariations, productAlternateImages, productAttributes, variantAttributes, orderItems, reviews, pageRevisions, pageCategoryRelations, pageAnalytics
-}
+// Table mapping for insertion - use dynamic schema access
+const getTableMap = () => ({
+  users: schema.users,
+  categories: schema.categories,
+  taxonomy: schema.taxonomy,
+  brands: schema.brands,
+  settings: schema.settings,
+  taxRates: schema.taxRates,
+  shippingMethods: schema.shippingMethods,
+  adminUsers: schema.adminUsers,
+  apiIntegrations: schema.apiIntegrations,
+  paymentGateways: schema.paymentGateways,
+  paymentSettings: schema.paymentSettings,
+  dataModeSettings: schema.dataModeSettings,
+  mainBanners: schema.mainBanners,
+  mini_banners: schema.mini_banners,
+  pages: schema.pages,
+  pageCategories: schema.pageCategories,
+  cartAbandonmentToggle: schema.cartAbandonmentToggle,
+  customers: schema.customers,
+  verificationTokens: schema.verificationTokens,
+  accounts: schema.accounts,
+  sessions: schema.sessions,
+  userProfiles: schema.userProfiles,
+  addresses: schema.addresses,
+  coupons: schema.coupons,
+  discounts: schema.discounts,
+  attributes: schema.attributes,
+  attributeValues: schema.attributeValues,
+  products: schema.products,
+  orders: schema.orders,
+  refunds: schema.refunds,
+  cartSessions: schema.cartSessions,
+  cartEvents: schema.cartEvents,
+  cartsRecovered: schema.cartsRecovered,
+  campaignEmails: schema.campaignEmails,
+  paymentTransactionLogs: schema.paymentTransactionLogs,
+  paymentGatewayHealthChecks: schema.paymentGatewayHealthChecks,
+  productVariations: schema.productVariations,
+  productAlternateImages: schema.productAlternateImages,
+  productAttributes: schema.productAttributes,
+  variantAttributes: schema.variantAttributes,
+  orderItems: schema.orderItems,
+  reviews: schema.reviews,
+  pageRevisions: schema.pageRevisions,
+  pageCategoryRelations: schema.pageCategoryRelations,
+  pageAnalytics: schema.pageAnalytics
+})
 
 // Filename to table mapping
 const filenameToTableMap: Record<string, string> = {
@@ -779,6 +821,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    const tableMap = getTableMap()
     const table = tableMap[tableName]
     if (!table) {
       return NextResponse.json(

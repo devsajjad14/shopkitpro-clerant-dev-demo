@@ -116,6 +116,17 @@ const nextConfig: NextConfig = {
   // Advanced output file tracing for function size optimization
   outputFileTracingExcludes: {
     '*': [
+      // Build caches and artifacts
+      '.next/cache/**',
+      '.next/trace',
+      '.next/app-build-manifest.json',
+      '.next/static/chunks/**/*.map',
+      
+      // Git files
+      '.git/**',
+      '.git/objects/**',
+      
+      // Node modules optimization
       'node_modules/@swc/core-linux-x64-gnu',
       'node_modules/@swc/core-linux-x64-musl',
       'node_modules/@esbuild/linux-x64',
@@ -125,6 +136,7 @@ const nextConfig: NextConfig = {
       'node_modules/canvas/**',
       'node_modules/puppeteer/**',
       'node_modules/playwright/**',
+      'node_modules/.cache/**',
       'node_modules/**/*.md',
       'node_modules/**/*.txt',
       'node_modules/**/test/**',
@@ -137,10 +149,13 @@ const nextConfig: NextConfig = {
       'node_modules/**/.nyc_output/**',
       'node_modules/**/bench/**',
       'node_modules/**/benchmark/**',
+      
+      // Project files
       'demo-data/**',
       'data-db/**',
       'demo-media/**',
       'public/uploads/**',
+      'public/images/**',
       'scripts/**',
       'drizzle/**',
       'prisma/**',
@@ -154,6 +169,7 @@ const nextConfig: NextConfig = {
 
   outputFileTracingIncludes: {
     '/api/**/*': ['./lib/**/*', './types/**/*', './utils/**/*'],
+    '/api/data-manager/**/*': ['./lib/data.ts', './lib/utils.ts'],
   },
   
   // Bundle optimization

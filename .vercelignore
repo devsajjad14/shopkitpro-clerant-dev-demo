@@ -1,10 +1,17 @@
 # Build caches and artifacts
 .next/cache/
+.next/cache/**
 .next/trace
 .next/static/chunks/**/*.map
+.next/app-build-manifest.json
 node_modules/.cache/
+node_modules/.cache/**
 tsconfig.tsbuildinfo
 dev.log
+
+# Git files
+.git/
+.git/**
 
 # Demo and development data
 demo-data/
