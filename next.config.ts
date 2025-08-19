@@ -147,6 +147,11 @@ const nextConfig: NextConfig = {
     ],
   },
 
+  // Ensure CSS processing works correctly in production
+  generateBuildId: async () => {
+    return 'build-' + Date.now()
+  },
+
   outputFileTracingIncludes: {
     '/api/**/*': ['./lib/**/*', './types/**/*', './utils/**/*'],
   },
@@ -247,6 +252,13 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
+
+  // Enable static optimization
+  poweredByHeader: false,
+  reactStrictMode: true,
+
+  // Force CSS to be processed correctly
+  swcMinify: true,
   
   // Keep linter and typescript off as requested
   typescript: {

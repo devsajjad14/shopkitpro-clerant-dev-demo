@@ -1,0 +1,15 @@
+
+> shopkitpro@0.1.0 build
+> next build
+
+ ⚠ Invalid next.config.ts options detected: 
+ ⚠     Unrecognized key(s) in object: 'swcMinify'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   ▲ Next.js 15.4.1
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     ✓ useCache
+     · cacheLife
+     · optimizePackageImports
+
+   Creating an optimized production build ...
