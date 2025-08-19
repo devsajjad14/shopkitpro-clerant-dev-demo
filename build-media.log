@@ -1,0 +1,28 @@
+
+> shopkitpro@0.1.0 build
+> next build
+
+ ⚠ Invalid next.config.ts options detected: 
+ ⚠     Unrecognized key(s) in object: 'swcMinify'
+ ⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+   ▲ Next.js 15.4.1
+   - Environments: .env.production, .env
+   - Experiments (use with caution):
+     ✓ useCache
+     · cacheLife
+     · optimizePackageImports
+
+   Creating an optimized production build ...
+ ⚠ Compiled with warnings in 7.0min
+
+./node_modules/framer-motion/dist/cjs/create-C1GSKRVD.js
+Module not found: Can't resolve '@emotion/is-prop-valid' in 'E:\production\Test dev shopkit pro\client\node_modules\framer-motion\dist\cjs'
+
+Import trace for requested module:
+./node_modules/framer-motion/dist/cjs/create-C1GSKRVD.js
+./node_modules/framer-motion/dist/cjs/index.js
+./app/admin/media/page.tsx
+
+   Skipping validation of types
+   Skipping linting
+uncaughtException [Error: write EPIPE] { errno: -4047, code: 'EPIPE', syscall: 'write' }

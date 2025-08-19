@@ -1,11 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { FiDownload, FiImage, FiFolder, FiCheck, FiX, FiLoader } from 'react-icons/fi'
 import { toast } from 'sonner'
+import dynamic from 'next/dynamic'
 
-export default function MediaPage() {
+// Dynamically import motion to avoid SSR issues
+const motion = dynamic(() => import('framer-motion').then(mod => ({ default: mod.motion })), {
+  ssr: false
+})
+
+function MediaPageContent() {
   const [isDownloading, setIsDownloading] = useState(false)
   const [downloadProgress, setDownloadProgress] = useState<{
     current: number
@@ -256,4 +261,33 @@ export default function MediaPage() {
       </motion.div>
     </div>
   )
+}
+
+export default function MediaPage() {
+  try {
+    return <MediaPageContent />
+  } catch (error) {
+    console.error('Media page error:', error)
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+            <div className="text-center">
+              <FiImage className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Media Manager</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Manage and download media files from Vercel Blob storage
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Reload Page
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 }

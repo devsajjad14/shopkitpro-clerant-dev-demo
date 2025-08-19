@@ -1,7 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import dynamic from 'next/dynamic'
+
+// Dynamically import motion components to avoid SSR issues
+const motion = dynamic(() => import('framer-motion').then(mod => ({ default: mod.motion })), {
+  ssr: false
+})
+const AnimatePresence = dynamic(() => import('framer-motion').then(mod => ({ default: mod.AnimatePresence })), {
+  ssr: false
+})
 import { 
   FiUpload, 
   FiDownload, 
@@ -18,7 +26,11 @@ import {
   FiPlay
 } from 'react-icons/fi'
 import { toast } from 'sonner'
-import { DeploymentOverlay } from '@/components/ui/deployment-overlay'
+// import { DeploymentOverlay } from '@/components/ui/deployment-overlay'
+const DeploymentOverlay = dynamic(() => import('@/components/ui/deployment-overlay').then(mod => ({ default: mod.DeploymentOverlay })), {
+  ssr: false,
+  loading: () => <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">Loading...</div>
+})
 
 type SyncDirection = 'upload' | 'download' | null
 type SyncStatus = 'idle' | 'analyzing' | 'syncing' | 'complete' | 'error'
@@ -35,7 +47,7 @@ interface SyncProgress {
   reason?: string
 }
 
-export default function SyncMediaPage() {
+function SyncMediaPageContent() {
   const [syncDirection, setSyncDirection] = useState<SyncDirection>(null)
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('idle')
   const [progress, setProgress] = useState<SyncProgress>({ current: 0, total: 0 })
@@ -593,4 +605,33 @@ export default function SyncMediaPage() {
       </div>
     </DeploymentOverlay>
   )
+}
+
+export default function SyncMediaPage() {
+  try {
+    return <SyncMediaPageContent />
+  } catch (error) {
+    console.error('Sync media page error:', error)
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-8">
+            <div className="text-center">
+              <FiRefreshCw className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">Media Sync Center</h1>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                Bidirectional media synchronization between local storage and Vercel Blob
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Reload Page
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 }
