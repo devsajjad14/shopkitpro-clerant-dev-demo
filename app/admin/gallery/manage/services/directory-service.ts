@@ -151,7 +151,7 @@ class DirectoryService {
 
   async deleteFile(fileUrl: string): Promise<boolean> {
     try {
-      const response = await fetch('/api/admin/media/delete', {
+      const response = await fetch('/api/media-manager/delete', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

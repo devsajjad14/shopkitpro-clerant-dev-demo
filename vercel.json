@@ -23,6 +23,9 @@
     "app/api/media-manager/files/[directoryId]/route.ts": {
       "maxDuration": 30
     },
+    "app/api/media-manager/delete/route.ts": {
+      "maxDuration": 30
+    },
     "app/api/data-manager/**/*.ts": {
       "maxDuration": 60
     },
