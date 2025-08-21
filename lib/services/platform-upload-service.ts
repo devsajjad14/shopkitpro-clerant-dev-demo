@@ -43,48 +43,24 @@ interface UploadResult {
   error?: string
 }
 
-// Get current platform with smart detection
+// Get current platform from global settings (simplified)
 async function getCurrentPlatform(): Promise<UploadPlatform> {
   try {
-    // First, check environment variables for Vercel
-    if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
-      console.log('🔍 [PLATFORM] Vercel environment detected from env vars')
-      console.log('   - VERCEL:', !!process.env.VERCEL)
-      console.log('   - VERCEL_ENV:', process.env.VERCEL_ENV)
-      console.log('   - VERCEL_URL:', !!process.env.VERCEL_URL)
-      console.log('   - BLOB_READ_WRITE_TOKEN:', !!process.env.BLOB_READ_WRITE_TOKEN)
-      return 'vercel'
-    }
-
-    // Next, try to get from settings
-    console.log('🔍 [PLATFORM] Checking settings...')
+    // Get from settings - this is the authoritative source
+    console.log('🔍 [PLATFORM] Getting platform from settings...')
     const settings = await getSettings('general')
-    console.log('🔍 [PLATFORM] Settings retrieved:', settings)
-    
-    if (settings.platform === 'vercel') {
-      console.log('✅ [PLATFORM] Vercel platform from settings')
-      return 'vercel'
-    } else if (settings.platform === 'server') {
-      console.log('✅ [PLATFORM] Server platform from settings')
-      return 'server'
-    }
-    
-    // Fallback to environment detection
-    console.log('🔍 [PLATFORM] Using environment detection fallback...')
-    const deploymentEnv = detectServerDeploymentEnvironment()
-    const fallbackPlatform = deploymentEnv.platform === 'vercel' ? 'vercel' : 'server'
-    console.log(`✅ [PLATFORM] Fallback platform: ${fallbackPlatform}`)
-    return fallbackPlatform
-    
+    const platform = settings?.platform === 'vercel' ? 'vercel' : 'server'
+    console.log('🔍 [PLATFORM] Platform from settings:', platform)
+    return platform
   } catch (error) {
-    console.warn('⚠️ [PLATFORM] Error in platform detection, using environment fallback:', error)
+    console.warn('🔍 [PLATFORM] Settings unavailable, using environment fallback:', error)
     
-    // Final fallback - check environment again
+    // Fallback to environment detection only if settings fail
     if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
-      console.log('✅ [PLATFORM] Final fallback: Vercel (from env)')
+      console.log('🔍 [PLATFORM] Environment fallback: Vercel')
       return 'vercel'
     } else {
-      console.log('✅ [PLATFORM] Final fallback: Server')
+      console.log('🔍 [PLATFORM] Environment fallback: Server')  
       return 'server'
     }
   }

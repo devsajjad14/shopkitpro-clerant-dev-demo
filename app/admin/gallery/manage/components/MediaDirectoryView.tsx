@@ -1,44 +1,23 @@
 'use client'
 
-import { Suspense, lazy, useState, useEffect } from 'react'
+import { Suspense, lazy } from 'react'
 import { motion } from 'framer-motion'
 import { FiFolder, FiServer, FiCloud } from 'react-icons/fi'
 import { Card } from '@/components/ui/card'
 import ErrorBoundary from './ui/ErrorBoundary'
+import useSettingStore from '@/hooks/use-setting-store'
 
 // Lazy load heavy tree components
 const DirectoryTree = lazy(() => import('./DirectoryTree'))
 
 export default function MediaDirectoryView() {
-  const [platformMode, setPlatformMode] = useState<string>('detecting...')
+  // Get platform from global settings store
+  const platform = useSettingStore((state) => state.getPlatform())
+  const isLoaded = useSettingStore((state) => state.isLoaded)
+  const settings = useSettingStore((state) => state.settings)
   
-  useEffect(() => {
-    console.log('🔍 [MediaDirectoryView] Component mounted, fetching platform info...')
-    
-    // Get platform mode from server
-    const fetchPlatformInfo = async () => {
-      try {
-        console.log('🔍 [MediaDirectoryView] Calling /api/admin/media/platform-info...')
-        const response = await fetch('/api/admin/media/platform-info')
-        console.log('🔍 [MediaDirectoryView] Response status:', response.status)
-        
-        if (response.ok) {
-          const data = await response.json()
-          console.log('🔍 [MediaDirectoryView] Platform data received:', data)
-          setPlatformMode(data.platform || 'unknown')
-          console.log('🔍 [MediaDirectoryView] Platform mode set to:', data.platform)
-        } else {
-          console.error('🔍 [MediaDirectoryView] API response not OK:', response.status)
-          setPlatformMode('error')
-        }
-      } catch (error) {
-        console.error('🔍 [MediaDirectoryView] Platform detection error:', error)
-        setPlatformMode('error')
-      }
-    }
-    
-    fetchPlatformInfo()
-  }, [])
+  console.log('🔍 [MediaDirectoryView] Platform from settings:', platform, 'isLoaded:', isLoaded)
+  console.log('🔍 [MediaDirectoryView] Full settings:', settings)
 
   return (
     <ErrorBoundary>
@@ -69,25 +48,29 @@ export default function MediaDirectoryView() {
             
             {/* Platform Mode Indicator */}
             <div className="flex items-center gap-2 px-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-xl rounded-lg border border-white/20 dark:border-gray-700/50 shadow-md">
-              {platformMode === 'vercel' ? (
-                <FiCloud className="w-4 h-4 text-blue-600" />
-              ) : platformMode === 'server' ? (
-                <FiServer className="w-4 h-4 text-[#00437f]" />
-              ) : platformMode === 'error' ? (
-                <div className="w-4 h-4 bg-red-500 rounded-full" />
+              {isLoaded ? (
+                <>
+                  {platform === 'vercel' ? (
+                    <FiCloud className="w-4 h-4 text-blue-600" />
+                  ) : (
+                    <FiServer className="w-4 h-4 text-[#00437f]" />
+                  )}
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-gray-900 dark:text-white">
+                      {platform === 'vercel' ? 'Vercel' : 'Server'}
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Platform</div>
+                  </div>
+                </>
               ) : (
-                <div className="w-4 h-4 bg-gray-400 rounded-full animate-pulse" />
+                <>
+                  <div className="w-4 h-4 bg-gray-400 rounded-full animate-pulse" />
+                  <div className="text-center">
+                    <div className="text-xs font-semibold text-gray-900 dark:text-white">Loading...</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">Platform</div>
+                  </div>
+                </>
               )}
-              <div className="text-center">
-                <div className="text-xs font-semibold text-gray-900 dark:text-white">
-                  {platformMode === 'vercel' ? 'Vercel' : 
-                   platformMode === 'server' ? 'Server' : 
-                   platformMode === 'error' ? 'Error' :
-                   platformMode === 'detecting...' ? 'Detecting...' :
-                   platformMode}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Platform</div>
-              </div>
             </div>
           </div>
 

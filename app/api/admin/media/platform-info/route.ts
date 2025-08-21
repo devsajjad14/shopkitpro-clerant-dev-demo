@@ -1,32 +1,17 @@
 import { NextResponse } from 'next/server'
-// Platform detection function - copied locally to avoid import issues
-async function getCurrentPlatform() {
-  try {
-    // First, check environment variables for Vercel
-    if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
-      console.log('🔍 [PLATFORM] Vercel environment detected from env vars')
-      return 'vercel'
-    }
 
-    // Default to server if no Vercel env vars
-    console.log('🔍 [PLATFORM] Server environment detected')
-    return 'server'
-    
-  } catch (error) {
-    console.warn('⚠️ [PLATFORM] Error in platform detection:', error)
-    
-    // Final fallback - check environment again
-    if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
-      return 'vercel'
-    } else {
-      return 'server'
-    }
+// Simple platform detection
+function getCurrentPlatform(): 'vercel' | 'server' {
+  // Check for Vercel environment variables
+  if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
+    return 'vercel'
   }
+  return 'server'
 }
 
 export async function GET() {
   try {
-    const platform = await getCurrentPlatform()
+    const platform = getCurrentPlatform()
     
     const info = {
       platform,
@@ -44,7 +29,7 @@ export async function GET() {
     
     return NextResponse.json(info)
   } catch (error) {
-    console.error('Error getting platform info:', error)
+    console.error('🔍 [PLATFORM-INFO] Error getting platform info:', error)
     return NextResponse.json(
       { 
         error: 'Failed to get platform information',
