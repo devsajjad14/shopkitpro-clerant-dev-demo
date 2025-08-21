@@ -1,7 +1,15 @@
 import { NextResponse } from 'next/server'
-import { UPLOAD_FOLDERS } from '@/app/admin/media/upload-media/config'
 import { list } from '@vercel/blob'
-import { getSettings } from '@/lib/actions/settings'
+
+const FOLDER_MAPPING = {
+  'products': 'products',
+  'brands': 'brands', 
+  'site': 'site',
+  'users': 'users',
+  'main-banners': 'main-banners',
+  'mini-banners': 'mini-banners',
+  'pages': 'pages'
+} as const
 
 export async function GET(
   request: Request,
@@ -9,72 +17,40 @@ export async function GET(
 ) {
   try {
     const directoryId = params.directoryId
-    console.log('🔍 [FILES-API] Request for directory:', directoryId)
+    const folderPath = FOLDER_MAPPING[directoryId as keyof typeof FOLDER_MAPPING]
     
-    // Find the folder configuration
-    const folder = UPLOAD_FOLDERS.find(f => f.id === directoryId)
-    if (!folder) {
+    if (!folderPath) {
       return NextResponse.json(
         { error: 'Directory not found' },
         { status: 404 }
       )
     }
 
-    console.log('🔍 [FILES-API] Folder found:', folder.name, 'path:', folder.path)
+    // Use the exact pattern from the example
+    const response = await list({
+      prefix: `${folderPath}/`, // filter by folder like "products/"
+      limit: 1000,
+    })
 
-    // Simple platform detection (same as working assets API)
-    let platform = 'server'
-    try {
-      const settings = await getSettings('general')
-      platform = settings?.platform === 'vercel' ? 'vercel' : 'server'
-    } catch (err) {
-      if (process.env.VERCEL || process.env.VERCEL_ENV) {
-        platform = 'vercel'
+    // Convert blobs to file format expected by frontend
+    const files = response.blobs.map(blob => {
+      const filename = blob.pathname.split('/').pop() || ''
+      const extension = filename.split('.').pop()?.toLowerCase() || ''
+      
+      return {
+        name: filename,
+        size: blob.size,
+        type: extension,
+        lastModified: blob.uploadedAt.toISOString(),
+        url: blob.downloadUrl || blob.url, // Use downloadUrl as recommended
+        isImage: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp'].includes(extension)
       }
-    }
-    
-    console.log('🔍 [FILES-API] Platform:', platform)
-    
-    if (platform === 'vercel') {
-      try {
-        // Use same approach as working assets API
-        console.log('🔍 [FILES-API] Getting Vercel blobs with prefix:', `${folder.path}/`)
-        const { blobs } = await list({ 
-          prefix: `${folder.path}/`  // Simple prefix like "products/"
-        })
-        
-        console.log('🔍 [FILES-API] Found', blobs.length, 'blobs')
-        
-        // Convert blobs to file format
-        const files = blobs.map(blob => {
-          const filename = blob.pathname.split('/').pop() || ''
-          const extension = filename.split('.').pop()?.toLowerCase() || ''
-          
-          return {
-            name: filename,
-            size: blob.size,
-            type: extension,
-            lastModified: blob.uploadedAt.toISOString(),
-            url: blob.url,
-            isImage: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg', 'bmp'].includes(extension)
-          }
-        })
-        
-        console.log('🔍 [FILES-API] Returning', files.length, 'files')
-        return NextResponse.json(files)
-        
-      } catch (vercelError) {
-        console.error('🔍 [FILES-API] Vercel error:', vercelError)
-        return NextResponse.json([])
-      }
-    }
-    
-    // Server platform would go here (not needed for this issue)
-    console.log('🔍 [FILES-API] Server platform - returning empty for now')
-    return NextResponse.json([])
+    })
+
+    return NextResponse.json(files)
 
   } catch (error) {
-    console.error('🔍 [FILES-API] Error getting directory files:', error)
+    console.error('Files API error:', error)
     return NextResponse.json(
       { error: 'Failed to get directory files' },
       { status: 500 }
