@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { directoryService } from '../services/directory-service'
-import type { DirectoryInfo, DirectoryStats } from '../services/directory-service'
+import type { DirectoryInfo } from '../services/directory-service'
 
 export function useDirectoryData() {
   const [directories, setDirectories] = useState<DirectoryInfo[]>([])

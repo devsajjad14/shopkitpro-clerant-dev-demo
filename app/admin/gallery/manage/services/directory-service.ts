@@ -26,14 +26,6 @@ export interface FileInfo {
   isImage?: boolean
 }
 
-export interface DirectoryStats {
-  totalFiles: number
-  totalFolders: number
-  totalSize: number
-  filesByType: Record<string, number>
-  largestFiles: FileInfo[]
-  recentFiles: FileInfo[]
-}
 
 class DirectoryService {
   private cacheExpiry = 5 * 60 * 1000 // 5 minutes
@@ -42,7 +34,7 @@ class DirectoryService {
     try {
       // Always fetch fresh data - no caching
       const timestamp = Date.now()
-      const response = await fetch(`/api/admin/media/directory/${directoryId}?t=${timestamp}`)
+      const response = await fetch(`/api/media-manager/directory/${directoryId}?t=${timestamp}`)
       if (!response.ok) {
         console.warn(`Failed to fetch directory info for ${directoryId}`)
         return this.getFallbackDirectoryInfo(directoryId)
@@ -73,28 +65,12 @@ class DirectoryService {
       .map(result => result.value)
   }
 
-  async getDirectoryStats(): Promise<DirectoryStats> {
-    try {
-      // Always fetch fresh data - no caching
-      const timestamp = Date.now()
-      const response = await fetch(`/api/admin/media/stats?t=${timestamp}`)
-      if (!response.ok) {
-        return this.getFallbackStats()
-      }
-
-      const stats = await response.json()
-      return stats
-    } catch (error) {
-      console.error('Error fetching directory stats:', error)
-      return this.getFallbackStats()
-    }
-  }
 
   async getDirectoryFiles(directoryId: string): Promise<FileInfo[]> {
     try {
       // Always fetch fresh data - no caching
       const timestamp = Date.now()
-      const response = await fetch(`/api/admin/media/files/${directoryId}?t=${timestamp}`)
+      const response = await fetch(`/api/media-manager/files/${directoryId}?t=${timestamp}`)
       if (!response.ok) {
         return []
       }
@@ -132,16 +108,6 @@ class DirectoryService {
     }
   }
 
-  private getFallbackStats(): DirectoryStats {
-    return {
-      totalFiles: 0,
-      totalFolders: UPLOAD_FOLDERS.length,
-      totalSize: 0,
-      filesByType: {},
-      largestFiles: [],
-      recentFiles: []
-    }
-  }
 
   private isImageFile(filename: string): boolean {
     const imageExtensions = [
@@ -198,7 +164,6 @@ class DirectoryService {
       if (result.success) {
         // Clear all relevant caches after successful deletion
         this.clearCache() // Clear directory and file caches
-        cacheManager.delete('directory_stats') // Clear stats cache
         
         // Also clear any pattern-based caches if needed
         cacheManager.clearByPattern('^(dir_|files_)')

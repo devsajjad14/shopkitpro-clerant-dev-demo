@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { directoryService } from '../services/directory-service'
-import type { DirectoryInfo, DirectoryStats } from '../services/directory-service'
+import type { DirectoryInfo } from '../services/directory-service'
 
 export function useDirectoryData() {
   const [directories, setDirectories] = useState<DirectoryInfo[]>([])
-  const [stats, setStats] = useState<DirectoryStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -20,13 +19,8 @@ export function useDirectoryData() {
         directoryService.clearCache()
       }
       
-      const [directoriesData, statsData] = await Promise.all([
-        directoryService.getAllDirectories(),
-        directoryService.getDirectoryStats()
-      ])
-      
+      const directoriesData = await directoryService.getAllDirectories()
       setDirectories(directoriesData)
-      setStats(statsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load directory data')
     } finally {
@@ -47,14 +41,6 @@ export function useDirectoryData() {
     }
   }, [])
 
-  const refreshStats = useCallback(async () => {
-    try {
-      const statsData = await directoryService.getDirectoryStats()
-      setStats(statsData)
-    } catch (err) {
-      console.error('Failed to refresh stats:', err)
-    }
-  }, [])
 
   const toggleDirectory = useCallback((directoryId: string) => {
     setDirectories(prev => 
@@ -73,11 +59,9 @@ export function useDirectoryData() {
 
   return {
     directories,
-    stats,
     loading,
     error,
     refreshDirectory,
-    refreshStats,
     toggleDirectory,
     reload: loadDirectories,
     forceRefresh: () => loadDirectories(true)

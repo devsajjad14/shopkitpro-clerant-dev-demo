@@ -4,7 +4,6 @@ import { memo, useState, Suspense, lazy } from 'react'
 import { motion } from 'framer-motion'
 import { FiFolder, FiChevronRight, FiFile, FiRefreshCw, FiImage } from 'react-icons/fi'
 import { useDirectoryFiles } from '../hooks/useDirectoryFiles'
-import { formatFileSize } from '../utils'
 import { directoryService } from '../services/directory-service'
 import LoadingSpinner from './ui/LoadingSpinner'
 import FileActions from './ui/FileActions'
@@ -117,11 +116,6 @@ const FolderItem = memo(function FolderItem({
               <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full">
                 {directory.fileCount} files
               </span>
-              {directory.totalSize > 0 && (
-                <span className="text-xs bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 px-2 py-0.5 rounded-full">
-                  {formatFileSize(directory.totalSize)}
-                </span>
-              )}
             </div>
           </div>
           <p className="text-xs text-gray-400 dark:text-gray-500">{directory.description}</p>
