@@ -825,14 +825,9 @@ async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[
 
     console.log(`🔍 [VERCEL-FILES] Searching for directory: "${directoryPath}"`)
     
-    // Enhanced prefix patterns with better matching
-    const prefixPatterns = [
-      `${directoryPath}/`,           // Standard: brands/
-      directoryPath + '/',           // Ensure slash: brands/
-      directoryPath,                 // Without slash: brands
-      `media/${directoryPath}/`,     // With media prefix: media/brands/
-      `media/${directoryPath}`,      // Media prefix no slash: media/brands
-    ]
+    // For Vercel compatibility, try simple prefix first
+    const mainPrefix = `${directoryPath}/`
+    console.log(`🔍 [VERCEL-FILES] Trying main prefix: "${mainPrefix}"`)
 
     let allBlobs: any[] = []
     let successfulPrefix = ''
@@ -852,52 +847,48 @@ async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[
       console.warn('🔍 [DEBUG] Could not fetch sample paths:', debugError)
     }
     
-    // Try each prefix pattern with pagination
-    for (const prefix of prefixPatterns) {
-      try {
-        console.log(`🔍 [VERCEL-FILES] Trying prefix: "${prefix}" with pagination...`)
+    // Try the simple prefix first
+    try {
+      console.log(`🔍 [VERCEL-FILES] Trying main prefix: "${mainPrefix}" with pagination...`)
         
-        let cursor: string | undefined
-        let pageCount = 0
-        const maxPages = 50 // Safety limit to prevent infinite loops
-        let prefixTotalBlobs: any[] = []
+      let cursor: string | undefined
+      let pageCount = 0
+      const maxPages = 10 // Reduced for Vercel timeout
+      let prefixTotalBlobs: any[] = []
+      
+      // Fetch pages for this prefix
+      do {
+        pageCount++
+        console.log(`📄 [VERCEL-FILES] Fetching page ${pageCount} for "${mainPrefix}"${cursor ? ` (cursor: ${cursor.substring(0, 20)}...)` : ''}`)
         
-        // Fetch all pages for this prefix
-        do {
-          pageCount++
-          console.log(`📄 [VERCEL-FILES] Fetching page ${pageCount} for prefix "${prefix}"${cursor ? ` (cursor: ${cursor.substring(0, 20)}...)` : ''}`)
-          
-          const result = await list({ 
-            prefix, 
-            limit: 100, // Smaller batches to reduce timeout risk
-            cursor 
-          })
-          
-          console.log(`📊 [VERCEL-FILES] Page ${pageCount}: ${result.blobs.length} blobs, hasMore: ${result.hasMore}`)
-          
-          prefixTotalBlobs = prefixTotalBlobs.concat(result.blobs)
-          cursor = result.cursor
-          
-          // Safety check
-          if (pageCount >= maxPages) {
-            console.warn(`⚠️ [VERCEL-FILES] Reached max pages (${maxPages}) for prefix "${prefix}"`)
-            break
-          }
-        } while (cursor)
+        const result = await list({ 
+          prefix: mainPrefix,
+          limit: 50,
+          cursor,
+          mode: 'expanded' // Explicitly set mode for folder files
+        })
         
-        console.log(`📊 [VERCEL-FILES] Total found with prefix "${prefix}": ${prefixTotalBlobs.length} blobs across ${pageCount} pages`)
+        console.log(`📊 [VERCEL-FILES] Page ${pageCount}: ${result.blobs.length} blobs`)
         
-        // Log first few pathnames for debugging
-        if (prefixTotalBlobs.length > 0) {
-          console.log(`📋 [VERCEL-FILES] Sample files:`, prefixTotalBlobs.slice(0, 3).map(b => b.pathname))
-          allBlobs = prefixTotalBlobs
-          successfulPrefix = prefix
-          console.log(`✅ [VERCEL-FILES] SUCCESS with prefix: "${prefix}" (${prefixTotalBlobs.length} total files)`)
+        prefixTotalBlobs = prefixTotalBlobs.concat(result.blobs)
+        cursor = result.cursor
+        
+        // Safety check for Vercel timeout
+        if (pageCount >= maxPages) {
+          console.warn(`⚠️ [VERCEL-FILES] Reached max pages (${maxPages}) - stopping to avoid timeout`)
           break
         }
-      } catch (prefixError) {
-        console.warn(`⚠️ [VERCEL-FILES] Error with prefix "${prefix}":`, prefixError)
+      } while (cursor)
+      
+      console.log(`📊 [VERCEL-FILES] Total found: ${prefixTotalBlobs.length} blobs`)
+      
+      if (prefixTotalBlobs.length > 0) {
+        console.log(`✅ [VERCEL-FILES] SUCCESS with prefix: "${mainPrefix}"`)
+        allBlobs = prefixTotalBlobs
+        successfulPrefix = mainPrefix
       }
+    } catch (prefixError) {
+      console.warn(`⚠️ [VERCEL-FILES] Error with main prefix:`, prefixError)
     }
 
     // If still no results, try a broader paginated search and filter manually
