@@ -1,12 +1,36 @@
 'use server'
 
-import { put, del } from '@vercel/blob'
+import { put, del, list } from '@vercel/blob'
 import sharp from 'sharp'
-import { writeFile, mkdir, unlink } from 'fs/promises'
+import { writeFile, mkdir, unlink, access, constants } from 'fs/promises'
 import { join } from 'path'
 import { existsSync } from 'fs'
 import { getSettings } from '@/lib/actions/settings'
 import { detectServerDeploymentEnvironment } from '@/lib/utils/server-deployment-detection'
+
+// Expert helper functions
+async function checkDirectoryWritable(dirPath: string): Promise<boolean> {
+  try {
+    await access(dirPath, constants.W_OK)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function detectFileTypeFromBuffer(buffer: Buffer): string {
+  const signature = buffer.slice(0, 12).toString('hex')
+  
+  // File signature detection
+  if (signature.startsWith('52494646') && signature.includes('57454250')) return 'WebP'
+  if (signature.startsWith('0000002066747970617669662d') || signature.startsWith('0000001c66747970617669662d')) return 'AVIF'  
+  if (signature.startsWith('89504e47')) return 'PNG'
+  if (signature.startsWith('ffd8ff')) return 'JPEG'
+  if (signature.startsWith('474946383761') || signature.startsWith('474946383961')) return 'GIF'
+  if (signature.includes('3c737667') || signature.includes('3c3f786d6c')) return 'SVG'
+  
+  return `Unknown`
+}
 
 export type UploadPlatform = 'server' | 'vercel'
 export type AssetType = 'logo' | 'favicon' | 'product' | 'product-alt' | 'product-variant' | 'brand' | 'user' | 'banner' | 'mini-banner' | 'page'
@@ -22,14 +46,20 @@ interface UploadResult {
 // Get current platform from settings with smart fallback
 async function getCurrentPlatform(): Promise<UploadPlatform> {
   try {
+    console.log('Getting platform settings...')
     const settings = await getSettings('general')
-    return (settings.platform === 'vercel') ? 'vercel' : 'server'
+    console.log('Platform settings retrieved:', settings)
+    const platform = (settings.platform === 'vercel') ? 'vercel' : 'server'
+    console.log(`Platform determined: ${platform}`)
+    return platform
   } catch (error) {
     console.warn('Failed to get platform setting, using environment detection:', error)
     
     // Fallback to environment detection
     const deploymentEnv = detectServerDeploymentEnvironment()
-    return deploymentEnv.platform === 'vercel' ? 'vercel' : 'server'
+    const fallbackPlatform = deploymentEnv.platform === 'vercel' ? 'vercel' : 'server'
+    console.log(`Fallback platform determined: ${fallbackPlatform}`)
+    return fallbackPlatform
   }
 }
 
@@ -44,8 +74,12 @@ async function uploadToServer(
   color?: string
 ): Promise<UploadResult> {
   try {
-    // Create media directories if they don't exist
+    // Debug: Check what the current working directory actually is
+    console.log('🔍 DEBUG - process.cwd():', process.cwd())
+    
+    // Create media directories if they don't exist - use media path (cwd is already client directory)
     const baseMediaDir = join(process.cwd(), 'media')
+    console.log('🔍 DEBUG - baseMediaDir:', baseMediaDir)
     let targetDir: string
     
     if (type.startsWith('product')) {
@@ -64,25 +98,30 @@ async function uploadToServer(
       targetDir = join(baseMediaDir, 'site')
     }
     
+    console.log('🔍 DEBUG - targetDir:', targetDir)
+    console.log('🔍 DEBUG - baseMediaDir exists?', existsSync(baseMediaDir))
+    console.log('🔍 DEBUG - targetDir exists?', existsSync(targetDir))
+    
     if (!existsSync(baseMediaDir)) {
+      console.log('🔧 Creating baseMediaDir:', baseMediaDir)
       await mkdir(baseMediaDir, { recursive: true })
     }
     
     if (!existsSync(targetDir)) {
+      console.log('🔧 Creating targetDir:', targetDir)
       await mkdir(targetDir, { recursive: true })
     }
     
-    // Generate filename based on type
+    // Use original filename exactly as provided - NO MODIFICATIONS
+    console.log('🎨 PRESERVING ORIGINAL FILENAME - NO SANITIZATION')
+    const originalFilename = originalName // Keep exact original name
+    console.log('🎨 Original filename will be preserved:', originalFilename)
+    
+    // Still need these variables for product images
     const timestamp = Date.now()
-    // Sanitize filename: remove special characters, spaces, and non-ASCII characters
-    const sanitizedName = originalName
-      .replace(/\.[^/.]+$/, '') // Remove extension
-      .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace special chars and spaces with underscores
-      .replace(/_+/g, '_') // Replace multiple underscores with single
-      .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-      .toLowerCase() // Convert to lowercase for consistency
-    const nameWithoutExt = sanitizedName || 'image' // Fallback if name becomes empty
     const extension = originalName.split('.').pop()?.toLowerCase() || 'jpg'
+    
+    console.log('🎨 DEBUG - Original filename preserved:', originalFilename)
     
     let filename: string
     let filePath: string
@@ -164,45 +203,53 @@ async function uploadToServer(
         path: filePath
       }
     } else {
-      // Logic for logo/favicon/brand/user/banner/mini-banner
-      filename = `${type}_${timestamp}_${nameWithoutExt}.${extension}`
+      // Use original filename exactly - NO timestamp or type prefix
+      filename = originalFilename
       filePath = join(targetDir, filename)
       
       let processedBuffer: Buffer
       
-      if (type === 'logo' || type === 'brand') {
-        processedBuffer = await sharp(buffer)
-          .resize(300, 300, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'user') {
-        processedBuffer = await sharp(buffer)
-          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'banner') {
-        processedBuffer = await sharp(buffer)
-          .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'mini-banner') {
-        processedBuffer = await sharp(buffer)
-          .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'page') {
-        processedBuffer = await sharp(buffer)
-          .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else {
-        processedBuffer = await sharp(buffer)
-          .resize(32, 32, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 85 })
-          .toBuffer()
-      }
+      // Upload ALL images as-is without ANY processing or resizing
+      console.log('🎨 DEBUG - Uploading as-is with original filename:', originalFilename)
+      console.log('🎨 DEBUG - Original buffer size:', buffer.length, 'bytes')
+      console.log('📸 NO PROCESSING - Uploading original file')
       
-      await writeFile(filePath, processedBuffer)
+      // Use original buffer for all formats - no Sharp processing at all
+      processedBuffer = buffer
+      
+      console.log('✅ Processing complete - output size:', processedBuffer.length, 'bytes')
+      
+      console.log('💾 EXPERT FILE WRITE ANALYSIS')
+      console.log('  Target path:', filePath)
+      console.log('  Buffer size:', processedBuffer.length, 'bytes')
+      console.log('  Directory exists:', existsSync(targetDir))
+      console.log('  Parent directory writable:', await checkDirectoryWritable(targetDir))
+      
+      // Check file extension and buffer compatibility
+      const detectedType = detectFileTypeFromBuffer(processedBuffer)
+      console.log('  Detected file type from buffer:', detectedType)
+      console.log('  Extension matches buffer:', extension === detectedType.toLowerCase())
+      
+      try {
+        await writeFile(filePath, processedBuffer)
+        console.log('  ✅ File written successfully')
+        
+        // Verify write success
+        if (existsSync(filePath)) {
+          const writtenFileSize = (await import('fs')).statSync(filePath).size
+          console.log('  ✅ File exists after write')
+          console.log('  ✅ Written file size:', writtenFileSize, 'bytes')
+          console.log('  ✅ Size match:', writtenFileSize === processedBuffer.length ? '✅' : '❌')
+        } else {
+          console.error('  ❌ File does not exist after write')
+        }
+      } catch (writeError) {
+        console.error('❌ File write error:', writeError)
+        console.error('  Error type:', writeError.constructor.name)
+        console.error('  Error message:', writeError.message)
+        console.error('  Error code:', (writeError as any).code)
+        throw writeError
+      }
       
       let publicUrl: string
       if (type.startsWith('product')) {
@@ -425,66 +472,34 @@ async function uploadToVercel(
         }
       }
     } else {
-      // Logic for logo/favicon/brand
-      const timestamp = Date.now()
-      // Sanitize filename: remove special characters, spaces, and non-ASCII characters
-      const sanitizedName = originalName
-        .replace(/\.[^/.]+$/, '') // Remove extension
-        .replace(/[^a-zA-Z0-9_-]/g, '_') // Replace special chars and spaces with underscores
-        .replace(/_+/g, '_') // Replace multiple underscores with single
-        .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-        .toLowerCase() // Convert to lowercase for consistency
-      const nameWithoutExt = sanitizedName || 'image' // Fallback if name becomes empty
-      const extension = originalName.split('.').pop()?.toLowerCase() || 'jpg'
+      // Use original filename exactly - NO MODIFICATIONS for Vercel
+      console.log('🎨 VERCEL - PRESERVING ORIGINAL FILENAME - NO SANITIZATION')
+      const originalFilename = originalName // Keep exact original name
+      console.log('🎨 VERCEL - Original filename will be preserved:', originalFilename)
       
       let filePath: string
       if (type === 'brand') {
-        filePath = `brands/${type}_${timestamp}_${nameWithoutExt}.${extension}`
+        filePath = `brands/${originalFilename}`
       } else if (type === 'user') {
-        filePath = `users/${type}_${timestamp}_${nameWithoutExt}.${extension}`
+        filePath = `users/${originalFilename}`
       } else if (type === 'banner') {
-        filePath = `main-banners/${type}_${timestamp}_${nameWithoutExt}.${extension}`
+        filePath = `main-banners/${originalFilename}`
       } else if (type === 'mini-banner') {
-        filePath = `mini-banners/${type}_${timestamp}_${nameWithoutExt}.${extension}`
+        filePath = `mini-banners/${originalFilename}`
       } else if (type === 'page') {
-        filePath = `pages/${type}_${timestamp}_${nameWithoutExt}.${extension}`
+        filePath = `pages/${originalFilename}`
       } else {
-        filePath = `site/${type}_${timestamp}_${nameWithoutExt}.${extension}`
+        filePath = `site/${originalFilename}`
       }
       
       let processedBuffer: Buffer
       
-      if (type === 'logo' || type === 'brand') {
-        processedBuffer = await sharp(buffer)
-          .resize(300, 300, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'user') {
-        processedBuffer = await sharp(buffer)
-          .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'banner') {
-        processedBuffer = await sharp(buffer)
-          .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'mini-banner') {
-        processedBuffer = await sharp(buffer)
-          .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else if (type === 'page') {
-        processedBuffer = await sharp(buffer)
-          .resize(1920, 1080, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 90 })
-          .toBuffer()
-      } else {
-        processedBuffer = await sharp(buffer)
-          .resize(32, 32, { fit: 'inside', withoutEnlargement: true })
-          .jpeg({ quality: 85 })
-          .toBuffer()
-      }
+      // Upload ALL images as-is without ANY processing or resizing (Vercel)
+      console.log('🎨 DEBUG - Uploading as-is (Vercel) with original filename:', originalFilename)
+      console.log('📸 NO PROCESSING - Uploading original file (Vercel)')
+      
+      // Use original buffer for all formats - no Sharp processing at all
+      processedBuffer = buffer
       
       const blob = await put(filePath, processedBuffer, {
         access: 'public',
@@ -560,10 +575,34 @@ export async function uploadAsset(
   }
 ): Promise<UploadResult> {
   try {
-    const platform = forcePlatform || await getCurrentPlatform()
-    const buffer = Buffer.from(await file.arrayBuffer())
+    console.log('🔬 EXPERT ASSET UPLOAD ANALYSIS')
+    console.log('📊 Node.js Environment:')
+    console.log('  Node Version:', process.version)
+    console.log('  Platform:', process.platform)
+    console.log('  Arch:', process.arch)
+    console.log('  Memory Usage:', process.memoryUsage())
     
-    console.log(`Uploading ${type} to ${platform} platform`, options)
+    const platform = forcePlatform || await getCurrentPlatform()
+    
+    // Expert buffer analysis
+    console.log('📊 File Processing:')
+    console.log('  Original file size:', file.size, 'bytes')
+    console.log('  File type:', file.type)
+    console.log('  File name:', file.name)
+    
+    let buffer: Buffer
+    try {
+      const arrayBuffer = await file.arrayBuffer()
+      buffer = Buffer.from(arrayBuffer)
+      console.log('  ✅ ArrayBuffer → Buffer conversion successful')
+      console.log('  Buffer size:', buffer.length, 'bytes')
+      console.log('  Size match:', buffer.length === file.size ? '✅' : '❌')
+    } catch (bufferError) {
+      console.error('❌ Buffer conversion failed:', bufferError)
+      throw new Error(`Buffer conversion failed: ${bufferError}`)
+    }
+    
+    console.log(`🎯 Uploading ${type} to ${platform} platform`, options)
     
     if (platform === 'vercel') {
       return await uploadToVercel(
@@ -672,6 +711,179 @@ export async function migrateAsset(
       success: false,
       error: `Failed to migrate ${type} asset`
     }
+  }
+}
+
+// Platform-aware directory listing functions
+export interface PlatformFileInfo {
+  name: string
+  size: number
+  type: string
+  lastModified: Date
+  url: string
+  isImage: boolean
+}
+
+export interface PlatformDirectoryInfo {
+  id: string
+  name: string
+  path: string
+  description: string
+  icon: string
+  fileCount: number
+  totalSize: number
+  lastModified: Date
+}
+
+// Get path mapping for different asset types
+function getAssetPath(type: AssetType): string {
+  switch (type) {
+    case 'product':
+    case 'product-alt':
+    case 'product-variant':
+      return 'products'
+    case 'brand':
+      return 'brands'
+    case 'user':
+      return 'users'
+    case 'banner':
+      return 'main-banners'
+    case 'mini-banner':
+      return 'mini-banners'
+    case 'page':
+      return 'pages'
+    default:
+      return 'site'
+  }
+}
+
+// List files from server storage
+async function listServerFiles(directoryPath: string): Promise<PlatformFileInfo[]> {
+  try {
+    const { readdir, stat } = await import('fs/promises')
+    const fullPath = join(process.cwd(), 'media', directoryPath)
+    
+    if (!existsSync(fullPath)) {
+      return []
+    }
+
+    const files = await readdir(fullPath)
+    const fileInfos: PlatformFileInfo[] = []
+
+    for (const file of files) {
+      const filePath = join(fullPath, file)
+      try {
+        const fileStat = await stat(filePath)
+        if (fileStat.isFile()) {
+          const extension = file.split('.').pop()?.toLowerCase() || ''
+          const isImage = [
+            'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg',
+            'bmp', 'tiff', 'tif', 'ico', 'heic', 'heif'
+          ].includes(extension)
+
+          fileInfos.push({
+            name: file,
+            size: fileStat.size,
+            type: extension,
+            lastModified: fileStat.mtime,
+            url: `/media/${directoryPath}/${file}`,
+            isImage
+          })
+        }
+      } catch (err) {
+        continue
+      }
+    }
+
+    return fileInfos.sort((a, b) => 
+      new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+    )
+  } catch (error) {
+    console.error(`Error listing server files for ${directoryPath}:`, error)
+    return []
+  }
+}
+
+// List files from Vercel blob storage
+async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[]> {
+  try {
+    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      console.warn('BLOB_READ_WRITE_TOKEN not configured, cannot list Vercel files')
+      return []
+    }
+
+    const { blobs } = await list({
+      prefix: `${directoryPath}/`,
+      limit: 1000
+    })
+
+    const fileInfos: PlatformFileInfo[] = blobs.map(blob => {
+      const filename = blob.pathname.split('/').pop() || ''
+      const extension = filename.split('.').pop()?.toLowerCase() || ''
+      const isImage = [
+        'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg',
+        'bmp', 'tiff', 'tif', 'ico', 'heic', 'heif'
+      ].includes(extension)
+
+      return {
+        name: filename,
+        size: blob.size,
+        type: extension,
+        lastModified: blob.uploadedAt,
+        url: blob.url,
+        isImage
+      }
+    })
+
+    return fileInfos.sort((a, b) => 
+      new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
+    )
+  } catch (error) {
+    console.error(`Error listing Vercel files for ${directoryPath}:`, error)
+    return []
+  }
+}
+
+// Platform-aware file listing
+export async function listPlatformFiles(
+  directoryPath: string,
+  forcePlatform?: UploadPlatform
+): Promise<PlatformFileInfo[]> {
+  const platform = forcePlatform || await getCurrentPlatform()
+  
+  console.log(`📁 Listing files from ${platform} platform for directory: ${directoryPath}`)
+  
+  if (platform === 'vercel') {
+    return await listVercelFiles(directoryPath)
+  } else {
+    return await listServerFiles(directoryPath)
+  }
+}
+
+// Get directory info with platform awareness
+export async function getPlatformDirectoryInfo(
+  directoryId: string,
+  directoryConfig: { id: string; name: string; path: string; description: string; icon: string },
+  forcePlatform?: UploadPlatform
+): Promise<PlatformDirectoryInfo> {
+  const platform = forcePlatform || await getCurrentPlatform()
+  const files = await listPlatformFiles(directoryConfig.path, platform)
+  
+  const fileCount = files.length
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0)
+  const lastModified = files.length > 0 
+    ? new Date(Math.max(...files.map(f => new Date(f.lastModified).getTime())))
+    : new Date()
+
+  return {
+    id: directoryConfig.id,
+    name: directoryConfig.name,
+    path: directoryConfig.path,
+    description: directoryConfig.description,
+    icon: directoryConfig.icon,
+    fileCount,
+    totalSize,
+    lastModified
   }
 }
 

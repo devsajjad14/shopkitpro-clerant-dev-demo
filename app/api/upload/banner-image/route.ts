@@ -1,90 +1,164 @@
 import { NextResponse } from 'next/server'
-import { put, del, list } from '@vercel/blob'
-import { randomTenDigitString } from '@/lib/utils/image-utils'
+import { uploadAsset, deleteAsset } from '@/lib/services/platform-upload-service'
 
-// Helper function to ensure main-banners directory exists
-async function ensureMainBannersDirectory() {
-  try {
-    // List blobs to check if main-banners directory exists
-    const { blobs } = await list({ prefix: 'main-banners/' })
-    console.log('Main Banners directory check - found blobs:', blobs.length)
-    return true
-  } catch (error) {
-    console.log(
-      'Main Banners directory does not exist, will be created on first upload'
-    )
-    return false
+// Expert file type detection functions
+function getExpectedMimeType(extension?: string): string {
+  const mimeTypes: Record<string, string> = {
+    'webp': 'image/webp',
+    'avif': 'image/avif',
+    'png': 'image/png',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'gif': 'image/gif',
+    'svg': 'image/svg+xml'
   }
+  return mimeTypes[extension || ''] || 'unknown'
 }
 
-// Helper to delete old images for a banner name
-async function deleteOldImages(bannerName: string) {
-  try {
-    const { blobs } = await list({ prefix: 'main-banners/' })
-    
-    // Delete all images for this banner name
-    const bannerPattern = new RegExp(`^main-banners/${bannerName}_[0-9]{10}\.jpg$`)
-    for (const blob of blobs) {
-      if (bannerPattern.test(blob.pathname)) {
-        try {
-          await del(blob.pathname)
-          console.log('Deleted old banner image:', blob.pathname)
-        } catch (err) {
-          console.error('Failed to delete banner image:', blob.pathname, err)
-        }
-      }
-    }
-  } catch (error) {
-    console.error('Error listing or deleting old banner images:', error)
-    // Do not throw, just log
-  }
+function detectFileTypeFromSignature(uint8Array: Uint8Array): string {
+  const signature = Array.from(uint8Array.slice(0, 12))
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('')
+  
+  // File signature detection
+  if (signature.startsWith('52494646') && signature.includes('57454250')) return 'WebP'
+  if (signature.startsWith('00000020667479706176696631') || signature.startsWith('0000001c667479706176696631')) return 'AVIF'  
+  if (signature.startsWith('89504e47')) return 'PNG'
+  if (signature.startsWith('ffd8ff')) return 'JPEG'
+  if (signature.startsWith('474946383761') || signature.startsWith('474946383961')) return 'GIF'
+  if (signature.includes('3c737667') || signature.includes('3c3f786d6c')) return 'SVG'
+  
+  return `Unknown (${signature.slice(0, 16)}...)`
 }
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData()
+    console.log('🔥 BANNER API - Request received!')
+    
+    // Expert-level HTTP debugging
+    console.log('📡 REQUEST HEADERS:', Object.fromEntries(request.headers.entries()))
+    console.log('📡 REQUEST METHOD:', request.method)
+    console.log('📡 REQUEST URL:', request.url)
+    console.log('📡 CONTENT-TYPE:', request.headers.get('content-type'))
+    console.log('📡 CONTENT-LENGTH:', request.headers.get('content-length'))
+    
+    let formData: FormData
+    try {
+      formData = await request.formData()
+      console.log('✅ FormData parsed successfully')
+    } catch (formDataError) {
+      console.error('❌ FormData parsing failed:', formDataError)
+      return NextResponse.json({ error: 'Failed to parse form data' }, { status: 400 })
+    }
     const file = formData.get('file') as File
     const bannerName = formData.get('bannerName') as string
+    const folderType = formData.get('folderType') as string
+
+    // Debug logging - show ALL form data entries
+    console.log('🔍 BANNER API - Received FormData keys:', Array.from(formData.keys()))
+    console.log('🔍 BANNER API - All FormData entries:')
+    for (const [key, value] of formData.entries()) {
+      if (key === 'file') {
+        console.log(`  ${key}: File(${(value as File).name})`)
+      } else {
+        console.log(`  ${key}: ${value}`)
+      }
+    }
+    // Expert file analysis
+    if (file) {
+      console.log('📁 FILE ANALYSIS:')
+      console.log('  Name:', file.name)
+      console.log('  Size:', file.size, 'bytes')
+      console.log('  Type (MIME):', file.type)
+      console.log('  Last Modified:', file.lastModified ? new Date(file.lastModified).toISOString() : 'Unknown')
+      
+      // Deep file validation
+      const fileExtension = file.name.split('.').pop()?.toLowerCase()
+      console.log('  Extension:', fileExtension)
+      console.log('  MIME vs Extension match:', {
+        mime: file.type,
+        extension: fileExtension,
+        expectedMime: getExpectedMimeType(fileExtension)
+      })
+      
+      // File buffer analysis
+      try {
+        const arrayBuffer = await file.arrayBuffer()
+        const uint8Array = new Uint8Array(arrayBuffer)
+        const fileSignature = Array.from(uint8Array.slice(0, 12))
+          .map(byte => byte.toString(16).padStart(2, '0'))
+          .join(' ')
+        console.log('  File Signature (hex):', fileSignature)
+        console.log('  Actual file type:', detectFileTypeFromSignature(uint8Array))
+      } catch (bufferError) {
+        console.error('❌ Failed to read file buffer:', bufferError)
+      }
+    } else {
+      console.log('📁 BANNER API - No file received')
+    }
+    
+    console.log('🏷️ BANNER API - bannerName received:', bannerName)
+    
+    // Check for other parameters that might be sent instead
+    const folder = formData.get('folder')
+    const category = formData.get('category')
+    console.log('📂 BANNER API - folder parameter:', folder)
+    console.log('🏷️ BANNER API - category parameter:', category)
 
     if (!file) {
+      console.error('Banner API - No file in FormData')
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 })
     }
 
     if (!bannerName) {
+      console.error('❌ Banner API - No bannerName in FormData')
+      console.error('❌ Available FormData keys:', Array.from(formData.keys()))
+      console.error('❌ All FormData values:')
+      for (const [key, value] of formData.entries()) {
+        console.error(`  ${key}:`, typeof value === 'object' ? `File(${(value as File).name})` : value)
+      }
       return NextResponse.json({ error: 'Banner name is required' }, { status: 400 })
     }
 
     console.log(`Processing banner image upload - Banner Name: ${bannerName}`)
+    console.log('🏷️ BANNER API - folderType received:', folderType)
 
-    // Ensure main-banners directory exists
-    await ensureMainBannersDirectory()
+    // Determine banner type based on folder type (more reliable than filename)
+    // If folderType is missing, try to determine from bannerName as fallback
+    let bannerType: 'banner' | 'mini-banner'
+    
+    if (folderType) {
+      bannerType = folderType === 'main-banners' ? 'banner' : 'mini-banner'
+      console.log(`✅ Using folderType to determine banner type: ${bannerType}`)
+    } else {
+      // Fallback: check if bannerName indicates main banner
+      bannerType = bannerName.toLowerCase().includes('main') ? 'banner' : 'mini-banner'
+      console.log(`⚠️ folderType missing, using bannerName fallback: ${bannerType}`)
+    }
+    
+    console.log(`Banner type determined: ${bannerType}`)
+    console.log(`About to call uploadAsset with file: ${file.name}, type: ${bannerType}`)
+    
+    // Use platform-aware upload service
+    const uploadResult = await uploadAsset(file, bannerType)
+    
+    console.log(`Upload result:`, uploadResult)
 
-    // Delete old images for this banner name
-    await deleteOldImages(bannerName)
+    if (!uploadResult.success || !uploadResult.url) {
+      console.error('Banner upload failed:', uploadResult.error)
+      return NextResponse.json(
+        { error: uploadResult.error || 'Failed to upload banner' },
+        { status: 500 }
+      )
+    }
 
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-
-    // Generate unique filename: main-banners/banner_name_10digits.jpg
-    const uniqueId = randomTenDigitString()
-    const sanitizedBannerName = bannerName.replace(/[^a-zA-Z0-9-_]/g, '_').toLowerCase()
-    const imagePath = `main-banners/${sanitizedBannerName}_${uniqueId}.jpg`
-
-    // Use original buffer to avoid Sharp dependency in serverless functions
-    const processedBuffer = buffer
-
-    // Upload to Vercel Blob
-    const blob = await put(imagePath, processedBuffer, {
-      access: 'public',
-      addRandomSuffix: false,
-    })
-
-    console.log('Banner image uploaded successfully:', blob.url)
+    console.log(`Banner uploaded successfully: ${uploadResult.url}`)
 
     return NextResponse.json({
       success: true,
-      imageUrl: blob.url,
-      filename: imagePath
+      imageUrl: uploadResult.url,
+      url: uploadResult.url,
+      path: uploadResult.path || uploadResult.url
     })
 
   } catch (error) {
@@ -105,16 +179,21 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'Image URL is required' }, { status: 400 })
     }
 
-    // Extract the pathname from the URL
-    const url = new URL(imageUrl)
-    const pathname = url.pathname.substring(1) // Remove leading slash
+    console.log('DELETE request received for banner image URL:', imageUrl)
 
-    // Delete from Vercel Blob
-    await del(pathname)
+    // Use platform-aware delete service
+    const deleteSuccess = await deleteAsset(imageUrl)
 
-    console.log('Banner image deleted successfully:', pathname)
-
-    return NextResponse.json({ success: true })
+    if (deleteSuccess) {
+      console.log('Banner image deleted successfully:', imageUrl)
+      return NextResponse.json({ success: true })
+    } else {
+      console.error('Failed to delete banner image:', imageUrl)
+      return NextResponse.json(
+        { error: 'Failed to delete banner image' },
+        { status: 500 }
+      )
+    }
 
   } catch (error) {
     console.error('Error deleting banner image:', error)

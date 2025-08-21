@@ -8,8 +8,19 @@ import { deleteAsset } from '@/lib/services/platform-upload-service'
  */
 export async function DELETE(request: Request) {
   try {
+    // Support both URL parameters and JSON body
     const { searchParams } = new URL(request.url)
-    const fileUrl = searchParams.get('url')
+    let fileUrl = searchParams.get('url')
+    
+    // If no URL in params, try JSON body
+    if (!fileUrl) {
+      try {
+        const body = await request.json()
+        fileUrl = body.fileUrl || body.url
+      } catch (e) {
+        // Ignore JSON parsing errors
+      }
+    }
     
     console.log('🗑️  DELETE request received for media file:', fileUrl)
     

@@ -274,7 +274,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   // Force CSS to be processed correctly
-  swcMinify: true,
   
   // Keep linter and typescript off as requested
   typescript: {
