@@ -22,8 +22,10 @@ export default function PlatformSwitcher() {
   const isLoaded = useSettingStore((state) => state.isLoaded)
   const allSettings = useSettingStore((state) => state.settings)
 
-  const isVercel = platform === 'vercel'
-  const isServer = platform === 'server'
+  // Force Vercel mode when deployed on Vercel
+  const effectivePlatform = deploymentEnv.platform === 'vercel' ? 'vercel' : platform
+  const isVercel = effectivePlatform === 'vercel'
+  const isServer = effectivePlatform === 'server'
 
   // Get deployment restrictions and display info
   const deploymentInfo = getPlatformDisplayInfo(deploymentEnv)
@@ -35,6 +37,19 @@ export default function PlatformSwitcher() {
     const detected = detectDeploymentEnvironment()
     setDeploymentEnv(detected)
   }, [])
+
+  // Auto-sync platform setting when deployed on Vercel
+  useEffect(() => {
+    if (isLoaded && deploymentEnv.platform === 'vercel' && platform !== 'vercel') {
+      // Silently update settings to match deployment environment
+      updateSetting('platform', 'vercel').then((result) => {
+        if (result?.success) {
+          updateStoreSetting('platform', 'vercel')
+          console.log('🔄 Auto-synced platform setting to match Vercel deployment')
+        }
+      }).catch(console.error)
+    }
+  }, [isLoaded, deploymentEnv.platform, platform, updateStoreSetting])
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -48,7 +63,17 @@ export default function PlatformSwitcher() {
   }, [])
 
   const handlePlatformSwitch = async (newPlatform: 'server' | 'vercel') => {
-    if (newPlatform === platform || isUpdating) return
+    if (newPlatform === effectivePlatform || isUpdating) return
+
+    // Prevent switching when deployed on Vercel
+    if (deploymentEnv.platform === 'vercel' && newPlatform === 'server') {
+      toast.error('Server Storage Unavailable', {
+        description: 'Cannot use server storage when deployed on Vercel. Server storage is only available in local/server deployments.',
+        icon: '🔒',
+        duration: 4000
+      })
+      return
+    }
 
     // Check deployment restrictions
     if (newPlatform === 'server' && !canSwitchToServer) {
@@ -224,7 +249,7 @@ export default function PlatformSwitcher() {
 
               <div className="space-y-3">
                 {/* Server Option */}
-                {canSwitchToServer ? (
+                {(canSwitchToServer && deploymentEnv.platform !== 'vercel') ? (
                   <motion.div
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
