@@ -308,18 +308,18 @@ export function Sidebar({ className }: { className?: string }) {
             </NavGroup>
           </li>
 
-          {/* Media */}
+          {/* Gallery */}
           <li>
             <NavGroup
               icon={<FiImage />}
-              title='Media'
+              title='Gallery'
               isOpen={isOpen}
-              expanded={expandedGroup === 'Media'}
-              onToggle={() => handleGroupClick('Media')}
+              expanded={expandedGroup === 'Gallery'}
+              onToggle={() => handleGroupClick('Gallery')}
             >
               <NavItem
-                href='/admin/media/upload-media'
-                label='Media Manager'
+                href='/admin/gallery/manage'
+                label='Gallery Manager'
                 nested
                 isOpen={isOpen}
               />
