@@ -43,23 +43,50 @@ interface UploadResult {
   error?: string
 }
 
-// Get current platform from settings with smart fallback
+// Get current platform with smart detection
 async function getCurrentPlatform(): Promise<UploadPlatform> {
   try {
-    console.log('Getting platform settings...')
+    // First, check environment variables for Vercel
+    if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
+      console.log('🔍 [PLATFORM] Vercel environment detected from env vars')
+      console.log('   - VERCEL:', !!process.env.VERCEL)
+      console.log('   - VERCEL_ENV:', process.env.VERCEL_ENV)
+      console.log('   - VERCEL_URL:', !!process.env.VERCEL_URL)
+      console.log('   - BLOB_READ_WRITE_TOKEN:', !!process.env.BLOB_READ_WRITE_TOKEN)
+      return 'vercel'
+    }
+
+    // Next, try to get from settings
+    console.log('🔍 [PLATFORM] Checking settings...')
     const settings = await getSettings('general')
-    console.log('Platform settings retrieved:', settings)
-    const platform = (settings.platform === 'vercel') ? 'vercel' : 'server'
-    console.log(`Platform determined: ${platform}`)
-    return platform
-  } catch (error) {
-    console.warn('Failed to get platform setting, using environment detection:', error)
+    console.log('🔍 [PLATFORM] Settings retrieved:', settings)
+    
+    if (settings.platform === 'vercel') {
+      console.log('✅ [PLATFORM] Vercel platform from settings')
+      return 'vercel'
+    } else if (settings.platform === 'server') {
+      console.log('✅ [PLATFORM] Server platform from settings')
+      return 'server'
+    }
     
     // Fallback to environment detection
+    console.log('🔍 [PLATFORM] Using environment detection fallback...')
     const deploymentEnv = detectServerDeploymentEnvironment()
     const fallbackPlatform = deploymentEnv.platform === 'vercel' ? 'vercel' : 'server'
-    console.log(`Fallback platform determined: ${fallbackPlatform}`)
+    console.log(`✅ [PLATFORM] Fallback platform: ${fallbackPlatform}`)
     return fallbackPlatform
+    
+  } catch (error) {
+    console.warn('⚠️ [PLATFORM] Error in platform detection, using environment fallback:', error)
+    
+    // Final fallback - check environment again
+    if (process.env.VERCEL || process.env.VERCEL_ENV || process.env.VERCEL_URL) {
+      console.log('✅ [PLATFORM] Final fallback: Vercel (from env)')
+      return 'vercel'
+    } else {
+      console.log('✅ [PLATFORM] Final fallback: Server')
+      return 'server'
+    }
   }
 }
 
@@ -989,7 +1016,13 @@ export async function listPlatformFiles(
 ): Promise<PlatformFileInfo[]> {
   const platform = forcePlatform || await getCurrentPlatform()
   
-  console.log(`📁 Listing files from ${platform} platform for directory: ${directoryPath}`)
+  console.log(`📁 [PLATFORM-FILES] Listing files from "${platform}" platform for directory: "${directoryPath}"`)
+  console.log(`📁 [PLATFORM-FILES] forcePlatform:`, forcePlatform)
+  console.log(`📁 [PLATFORM-FILES] Environment check:`)
+  console.log(`   - VERCEL:`, !!process.env.VERCEL)
+  console.log(`   - VERCEL_ENV:`, process.env.VERCEL_ENV)
+  console.log(`   - VERCEL_URL:`, !!process.env.VERCEL_URL)
+  console.log(`   - BLOB_READ_WRITE_TOKEN:`, !!process.env.BLOB_READ_WRITE_TOKEN)
   
   try {
     if (platform === 'vercel') {
@@ -1053,6 +1086,7 @@ export async function getPlatformDirectoryInfo(
   forcePlatform?: UploadPlatform
 ): Promise<PlatformDirectoryInfo> {
   const platform = forcePlatform || await getCurrentPlatform()
+  console.log(`📂 [DIR-INFO] Getting info for "${directoryId}" using platform: "${platform}"`)
   const files = await listPlatformFiles(directoryConfig.path, platform)
   
   const fileCount = files.length
