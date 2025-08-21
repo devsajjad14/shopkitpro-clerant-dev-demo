@@ -804,25 +804,156 @@ async function listServerFiles(directoryPath: string): Promise<PlatformFileInfo[
   }
 }
 
-// List files from Vercel blob storage
+// List files from Vercel blob storage with pagination
 async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[]> {
   try {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.warn('🔒 BLOB_READ_WRITE_TOKEN not configured, cannot list Vercel files')
+    const tokenExists = !!process.env.BLOB_READ_WRITE_TOKEN
+    const hasBlob = typeof process.env.BLOB_READ_WRITE_TOKEN === 'string' && process.env.BLOB_READ_WRITE_TOKEN.length > 0
+    
+    if (!tokenExists || !hasBlob) {
+      console.error('🔒 BLOB_READ_WRITE_TOKEN issue detected:')
+      console.error('   - tokenExists:', tokenExists)
+      console.error('   - hasBlob:', hasBlob)
+      console.error('   - tokenLength:', process.env.BLOB_READ_WRITE_TOKEN?.length || 0)
+      console.error('   - allBlobEnvs:', Object.keys(process.env).filter(key => key.includes('BLOB')))
       console.warn('📋 To enable Vercel storage, set BLOB_READ_WRITE_TOKEN in environment variables')
       return []
     }
 
-    console.log(`🔍 Searching Vercel blob storage for prefix: ${directoryPath}/`)
+    console.log(`🔍 [VERCEL-FILES] Searching for directory: "${directoryPath}"`)
     
-    const { blobs } = await list({
-      prefix: `${directoryPath}/`,
-      limit: 1000
-    })
+    // Enhanced prefix patterns with better matching
+    const prefixPatterns = [
+      `${directoryPath}/`,           // Standard: brands/
+      directoryPath + '/',           // Ensure slash: brands/
+      directoryPath,                 // Without slash: brands
+      `media/${directoryPath}/`,     // With media prefix: media/brands/
+      `media/${directoryPath}`,      // Media prefix no slash: media/brands
+    ]
 
-    console.log(`📊 Found ${blobs.length} blobs in Vercel storage for ${directoryPath}`)
+    let allBlobs: any[] = []
+    let successfulPrefix = ''
+    
+    // First, let's see what's actually in storage for debugging
+    try {
+      const { blobs: sampleBlobs } = await list({ limit: 10 })
+      console.log(`🔍 [DEBUG] Sample paths in storage:`, sampleBlobs.map(b => `"${b.pathname}"`).slice(0, 5))
+      
+      // Check if any sample paths start with our target directory
+      const matchingPaths = sampleBlobs.filter(b => 
+        b.pathname.startsWith(directoryPath + '/') || 
+        b.pathname.startsWith(directoryPath)
+      )
+      console.log(`🔍 [DEBUG] Paths matching "${directoryPath}":`, matchingPaths.map(b => b.pathname))
+    } catch (debugError) {
+      console.warn('🔍 [DEBUG] Could not fetch sample paths:', debugError)
+    }
+    
+    // Try each prefix pattern with pagination
+    for (const prefix of prefixPatterns) {
+      try {
+        console.log(`🔍 [VERCEL-FILES] Trying prefix: "${prefix}" with pagination...`)
+        
+        let cursor: string | undefined
+        let pageCount = 0
+        const maxPages = 50 // Safety limit to prevent infinite loops
+        let prefixTotalBlobs: any[] = []
+        
+        // Fetch all pages for this prefix
+        do {
+          pageCount++
+          console.log(`📄 [VERCEL-FILES] Fetching page ${pageCount} for prefix "${prefix}"${cursor ? ` (cursor: ${cursor.substring(0, 20)}...)` : ''}`)
+          
+          const result = await list({ 
+            prefix, 
+            limit: 100, // Smaller batches to reduce timeout risk
+            cursor 
+          })
+          
+          console.log(`📊 [VERCEL-FILES] Page ${pageCount}: ${result.blobs.length} blobs, hasMore: ${result.hasMore}`)
+          
+          prefixTotalBlobs = prefixTotalBlobs.concat(result.blobs)
+          cursor = result.cursor
+          
+          // Safety check
+          if (pageCount >= maxPages) {
+            console.warn(`⚠️ [VERCEL-FILES] Reached max pages (${maxPages}) for prefix "${prefix}"`)
+            break
+          }
+        } while (cursor)
+        
+        console.log(`📊 [VERCEL-FILES] Total found with prefix "${prefix}": ${prefixTotalBlobs.length} blobs across ${pageCount} pages`)
+        
+        // Log first few pathnames for debugging
+        if (prefixTotalBlobs.length > 0) {
+          console.log(`📋 [VERCEL-FILES] Sample files:`, prefixTotalBlobs.slice(0, 3).map(b => b.pathname))
+          allBlobs = prefixTotalBlobs
+          successfulPrefix = prefix
+          console.log(`✅ [VERCEL-FILES] SUCCESS with prefix: "${prefix}" (${prefixTotalBlobs.length} total files)`)
+          break
+        }
+      } catch (prefixError) {
+        console.warn(`⚠️ [VERCEL-FILES] Error with prefix "${prefix}":`, prefixError)
+      }
+    }
 
-    const fileInfos: PlatformFileInfo[] = blobs.map(blob => {
+    // If still no results, try a broader paginated search and filter manually
+    if (allBlobs.length === 0) {
+      console.warn(`🔍 [VERCEL-FILES] No files found with prefix patterns, trying paginated broad search...`)
+      try {
+        let cursor: string | undefined
+        let pageCount = 0
+        const maxPages = 20 // Limit for broad search
+        let allBlobsInStorage: any[] = []
+        
+        // Fetch all pages of all blobs
+        do {
+          pageCount++
+          console.log(`📄 [VERCEL-FILES] Broad search page ${pageCount}${cursor ? ` (cursor: ${cursor.substring(0, 20)}...)` : ''}`)
+          
+          const result = await list({ 
+            limit: 100, 
+            cursor 
+          })
+          
+          console.log(`📊 [VERCEL-FILES] Broad page ${pageCount}: ${result.blobs.length} blobs, hasMore: ${result.hasMore}`)
+          allBlobsInStorage = allBlobsInStorage.concat(result.blobs)
+          cursor = result.cursor
+          
+          if (pageCount >= maxPages) {
+            console.warn(`⚠️ [VERCEL-FILES] Reached max pages (${maxPages}) for broad search`)
+            break
+          }
+        } while (cursor)
+        
+        console.log(`📋 [VERCEL-FILES] Total blobs in storage: ${allBlobsInStorage.length}`)
+        
+        // Manual filtering for files that belong to this directory
+        const filteredBlobs = allBlobsInStorage.filter(blob => {
+          const pathParts = blob.pathname.split('/')
+          // Match exact directory name (brands matches brands/file.jpg)
+          return pathParts.length >= 2 && pathParts[0] === directoryPath
+        })
+        
+        console.log(`📋 [VERCEL-FILES] Manually filtered ${filteredBlobs.length} files for "${directoryPath}"`)
+        allBlobs = filteredBlobs
+        successfulPrefix = 'manual-filter-paginated'
+        
+        if (filteredBlobs.length > 0) {
+          console.log(`✅ [VERCEL-FILES] SUCCESS with manual filtering`)
+          console.log(`📋 [VERCEL-FILES] Found files:`, filteredBlobs.slice(0, 3).map(b => b.pathname))
+        }
+      } catch (broadError) {
+        console.error('❌ [VERCEL-FILES] Paginated broad search failed:', broadError)
+      }
+    }
+
+    if (allBlobs.length === 0) {
+      console.warn(`⚠️ [VERCEL-FILES] No files found for directory "${directoryPath}"`)
+      return []
+    }
+
+    const fileInfos: PlatformFileInfo[] = allBlobs.map(blob => {
       const filename = blob.pathname.split('/').pop() || ''
       const extension = filename.split('.').pop()?.toLowerCase() || ''
       const isImage = [
@@ -840,11 +971,12 @@ async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[
       }
     })
 
+    console.log(`✅ [VERCEL-FILES] Returning ${fileInfos.length} files for "${directoryPath}" using ${successfulPrefix}`)
     return fileInfos.sort((a, b) => 
       new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
     )
   } catch (error) {
-    console.error(`❌ Error listing Vercel files for ${directoryPath}:`, error)
+    console.error(`❌ [VERCEL-FILES] Error listing files for ${directoryPath}:`, error)
     console.error('💡 This could be due to missing BLOB_READ_WRITE_TOKEN or network issues')
     return []
   }
@@ -914,7 +1046,7 @@ export async function listPlatformFiles(
   }
 }
 
-// Get directory info with platform awareness
+// Get directory info with platform awareness (optimized - no size calculation)
 export async function getPlatformDirectoryInfo(
   directoryId: string,
   directoryConfig: { id: string; name: string; path: string; description: string; icon: string },
@@ -924,7 +1056,6 @@ export async function getPlatformDirectoryInfo(
   const files = await listPlatformFiles(directoryConfig.path, platform)
   
   const fileCount = files.length
-  const totalSize = files.reduce((sum, file) => sum + file.size, 0)
   const lastModified = files.length > 0 
     ? new Date(Math.max(...files.map(f => new Date(f.lastModified).getTime())))
     : new Date()
@@ -936,7 +1067,7 @@ export async function getPlatformDirectoryInfo(
     description: directoryConfig.description,
     icon: directoryConfig.icon,
     fileCount,
-    totalSize,
+    totalSize: 0, // Removed size calculation for performance
     lastModified
   }
 }

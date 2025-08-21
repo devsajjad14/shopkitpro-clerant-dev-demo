@@ -3,9 +3,19 @@ import { list } from '@vercel/blob'
 
 export async function GET() {
   try {
-    if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    const tokenExists = !!process.env.BLOB_READ_WRITE_TOKEN
+    const tokenValue = process.env.BLOB_READ_WRITE_TOKEN
+    
+    if (!tokenExists) {
       return NextResponse.json({
         error: 'BLOB_READ_WRITE_TOKEN not configured',
+        debug: {
+          tokenExists: false,
+          tokenLength: 0,
+          allEnvKeys: Object.keys(process.env).filter(key => key.includes('BLOB')),
+          vercelEnv: process.env.VERCEL_ENV,
+          nodeEnv: process.env.NODE_ENV
+        },
         blobs: [],
         count: 0
       })

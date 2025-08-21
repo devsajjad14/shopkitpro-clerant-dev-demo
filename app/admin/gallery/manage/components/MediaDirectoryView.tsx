@@ -8,7 +8,6 @@ import ErrorBoundary from './ui/ErrorBoundary'
 
 // Lazy load heavy tree components
 const DirectoryTree = lazy(() => import('./DirectoryTree'))
-const DirectoryStats = lazy(() => import('./DirectoryStats'))
 
 export default function MediaDirectoryView() {
   return (
@@ -47,19 +46,6 @@ export default function MediaDirectoryView() {
             <DirectoryTree />
           </Suspense>
           
-          {/* Summary Stats - Lazy loaded */}
-          <Suspense fallback={
-            <div className="mt-8 space-y-3">
-              <div className="w-48 h-4 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"></div>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="h-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"></div>
-                <div className="h-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"></div>
-                <div className="h-12 bg-gray-100 dark:bg-gray-700 rounded animate-pulse"></div>
-              </div>
-            </div>
-          }>
-            <DirectoryStats />
-          </Suspense>
           
         </Card>
       </motion.div>

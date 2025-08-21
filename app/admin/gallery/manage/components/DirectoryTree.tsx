@@ -21,7 +21,6 @@ const DirectoryTree = memo(function DirectoryTree() {
   
   const [rootExpanded, setRootExpanded] = useState(true)
 
-  const totalFiles = directories.reduce((sum, dir) => sum + dir.fileCount, 0)
 
   if (error) {
     return (
@@ -76,9 +75,6 @@ const DirectoryTree = memo(function DirectoryTree() {
                 </button>
                 <span className="text-sm bg-[#00437f]/10 text-[#00437f] dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full">
                   {directories.length} folders
-                </span>
-                <span className="text-sm bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 px-2 py-1 rounded-full">
-                  {totalFiles.toLocaleString()} files
                 </span>
               </div>
             </div>
