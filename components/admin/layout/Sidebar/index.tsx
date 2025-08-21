@@ -318,7 +318,7 @@ export function Sidebar({ className }: { className?: string }) {
               onToggle={() => handleGroupClick('Media')}
             >
               <NavItem
-                href='/admin/media/upload'
+                href='/admin/media/upload-media'
                 label='Media Manager'
                 nested
                 isOpen={isOpen}
