@@ -808,14 +808,19 @@ async function listServerFiles(directoryPath: string): Promise<PlatformFileInfo[
 async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[]> {
   try {
     if (!process.env.BLOB_READ_WRITE_TOKEN) {
-      console.warn('BLOB_READ_WRITE_TOKEN not configured, cannot list Vercel files')
+      console.warn('🔒 BLOB_READ_WRITE_TOKEN not configured, cannot list Vercel files')
+      console.warn('📋 To enable Vercel storage, set BLOB_READ_WRITE_TOKEN in environment variables')
       return []
     }
 
+    console.log(`🔍 Searching Vercel blob storage for prefix: ${directoryPath}/`)
+    
     const { blobs } = await list({
       prefix: `${directoryPath}/`,
       limit: 1000
     })
+
+    console.log(`📊 Found ${blobs.length} blobs in Vercel storage for ${directoryPath}`)
 
     const fileInfos: PlatformFileInfo[] = blobs.map(blob => {
       const filename = blob.pathname.split('/').pop() || ''
@@ -839,12 +844,13 @@ async function listVercelFiles(directoryPath: string): Promise<PlatformFileInfo[
       new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime()
     )
   } catch (error) {
-    console.error(`Error listing Vercel files for ${directoryPath}:`, error)
+    console.error(`❌ Error listing Vercel files for ${directoryPath}:`, error)
+    console.error('💡 This could be due to missing BLOB_READ_WRITE_TOKEN or network issues')
     return []
   }
 }
 
-// Platform-aware file listing
+// Platform-aware file listing with hybrid fallback
 export async function listPlatformFiles(
   directoryPath: string,
   forcePlatform?: UploadPlatform
@@ -853,10 +859,58 @@ export async function listPlatformFiles(
   
   console.log(`📁 Listing files from ${platform} platform for directory: ${directoryPath}`)
   
-  if (platform === 'vercel') {
-    return await listVercelFiles(directoryPath)
-  } else {
-    return await listServerFiles(directoryPath)
+  try {
+    if (platform === 'vercel') {
+      const vercelFiles = await listVercelFiles(directoryPath)
+      
+      // If no files in Vercel, try to fall back to server files
+      if (vercelFiles.length === 0) {
+        console.log(`🔄 No files found in Vercel for ${directoryPath}, trying server storage as fallback...`)
+        try {
+          const serverFiles = await listServerFiles(directoryPath)
+          
+          if (serverFiles.length > 0) {
+            console.log(`📋 Found ${serverFiles.length} files in server storage`)
+            // Mark server files with a source indicator but keep them functional
+            return serverFiles.map(file => ({
+              ...file,
+              name: `${file.name} (from server)`,
+              url: file.url
+            }))
+          }
+        } catch (serverError) {
+          console.warn('Server storage also unavailable:', serverError)
+        }
+      }
+      
+      return vercelFiles
+    } else {
+      // Server platform
+      const serverFiles = await listServerFiles(directoryPath)
+      
+      // If no server files, try Vercel as fallback (for migration scenarios)
+      if (serverFiles.length === 0) {
+        console.log(`🔄 No files found in server for ${directoryPath}, trying Vercel storage as fallback...`)
+        try {
+          const vercelFiles = await listVercelFiles(directoryPath)
+          
+          if (vercelFiles.length > 0) {
+            console.log(`📋 Found ${vercelFiles.length} files in Vercel storage`)
+            return vercelFiles.map(file => ({
+              ...file,
+              name: `${file.name} (from Vercel)`
+            }))
+          }
+        } catch (vercelError) {
+          console.warn('Vercel storage also unavailable:', vercelError)
+        }
+      }
+      
+      return serverFiles
+    }
+  } catch (error) {
+    console.error(`❌ Error in listPlatformFiles for ${directoryPath}:`, error)
+    return []
   }
 }
 
