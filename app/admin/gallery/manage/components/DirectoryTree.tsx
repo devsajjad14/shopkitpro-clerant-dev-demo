@@ -86,41 +86,7 @@ const DirectoryTree = memo(function DirectoryTree() {
         {/* Subdirectories */}
         {rootExpanded && (
           <div className="pl-6 pb-4 space-y-1">
-            {/* ALWAYS SHOW BASIC FOLDERS - NO LOADING CONDITIONS */}
-            <FolderItem
-              key="products"
-              directory={{
-                id: 'products',
-                name: 'products',
-                path: '/products',
-                description: 'Product images',
-                icon: '📦',
-                fileCount: 597,
-                totalSize: 0,
-                files: [],
-                isExpanded: false
-              }}
-              onToggle={toggleDirectory}
-              onRefresh={refreshDirectory}
-            />
-            <FolderItem
-              key="mini-banners"
-              directory={{
-                id: 'mini-banners',
-                name: 'mini-banners',
-                path: '/mini-banners',
-                description: 'Mini banner images',
-                icon: '🎨',
-                fileCount: 3,
-                totalSize: 0,
-                files: [],
-                isExpanded: false
-              }}
-              onToggle={toggleDirectory}
-              onRefresh={refreshDirectory}
-            />
-            
-            {/* ALSO SHOW DYNAMIC DIRECTORIES IF AVAILABLE */}
+            {/* SHOW DYNAMIC DIRECTORIES */}
             {directories.map((directory) => (
               <FolderItem
                 key={`dynamic-${directory.id}`}
