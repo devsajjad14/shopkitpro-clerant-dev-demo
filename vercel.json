@@ -8,23 +8,8 @@
     "app/api/**/*.ts": {
       "maxDuration": 30
     },
-    "app/api/admin/media/assets/route.ts": {
+    "app/api/admin/media/**/*.ts": {
       "maxDuration": 60
-    },
-    "app/api/admin/media/bulk-upload/route.ts": {
-      "maxDuration": 60
-    },
-    "app/api/admin/media/upload-to-vercel/route.ts": {
-      "maxDuration": 60
-    },
-    "app/api/media-manager/directory/[id]/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/media-manager/files/[directoryId]/route.ts": {
-      "maxDuration": 30
-    },
-    "app/api/media-manager/delete/route.ts": {
-      "maxDuration": 30
     },
     "app/api/data-manager/**/*.ts": {
       "maxDuration": 60
@@ -34,17 +19,7 @@
     }
   },
   
-  
   "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "s-maxage=300, stale-while-revalidate=3600"
-        }
-      ]
-    },
     {
       "source": "/_next/static/(.*)",
       "headers": [
@@ -53,49 +28,10 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
-    },
-    {
-      "source": "/media/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/uploads/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    }
-  ],
-  
-  "rewrites": [
-    {
-      "source": "/api/media-manager/directory/:path*",
-      "destination": "/api/media-manager/directory/:path*"
-    },
-    {
-      "source": "/api/media-manager/files/:path*", 
-      "destination": "/api/media-manager/files/:path*"
-    }
-  ],
-  
-  "redirects": [
-    {
-      "source": "/demo-media/(.*)",
-      "destination": "/media/$1",
-      "permanent": true
     }
   ],
   
   "env": {
     "NEXT_TELEMETRY_DISABLED": "1"
-  },
-  
-  "regions": ["iad1"]
+  }
 }
