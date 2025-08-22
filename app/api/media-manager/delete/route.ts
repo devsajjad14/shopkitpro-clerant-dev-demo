@@ -29,7 +29,15 @@ export async function DELETE(request: Request) {
       return NextResponse.json({
         success: false,
         error: 'No file URL provided'
-      }, { status: 400 })
+      }, { 
+        status: 400,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store'
+        }
+      })
     }
 
     console.log('🔄 Attempting to delete media file:', fileUrl)
@@ -44,13 +52,28 @@ export async function DELETE(request: Request) {
         message: 'File deleted successfully',
         deletedUrl: fileUrl,
         timestamp: new Date().toISOString()
+      }, {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store'
+        }
       })
     } else {
       console.error('❌ Failed to delete media file:', fileUrl)
       return NextResponse.json({
         success: false,
         error: 'Failed to delete file from storage'
-      }, { status: 500 })
+      }, { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+          'Surrogate-Control': 'no-store'
+        }
+      })
     }
   } catch (error) {
     console.error('❌ Media file deletion error:', error)
@@ -58,7 +81,15 @@ export async function DELETE(request: Request) {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred during file deletion',
       details: 'Check server logs for more information'
-    }, { status: 500 })
+    }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+        'Surrogate-Control': 'no-store'
+      }
+    })
   }
 }
 
@@ -70,5 +101,12 @@ export async function GET() {
     timestamp: new Date().toISOString(),
     supportedPlatforms: ['server', 'vercel'],
     description: 'Platform-aware file deletion with automatic cleanup'
+  }, {
+    headers: {
+      'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+      'Surrogate-Control': 'no-store'
+    }
   })
 }

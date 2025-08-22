@@ -30,17 +30,30 @@ export interface FileInfo {
 class DirectoryService {
   private cacheExpiry = 5 * 60 * 1000 // 5 minutes
 
-  async getDirectoryInfo(directoryId: string): Promise<DirectoryInfo | null> {
+  async getDirectoryInfo(directoryId: string, platform?: string): Promise<DirectoryInfo | null> {
     try {
       // Always fetch fresh data - no caching
       const timestamp = Date.now()
-      const response = await fetch(`/api/media-manager/directory/${directoryId}?t=${timestamp}`)
+      const platformParam = platform ? `&platform=${platform}` : ''
+      const url = `/api/media-manager/directory/${directoryId}?t=${timestamp}${platformParam}`
+      
+      
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      })
+      
       if (!response.ok) {
         console.warn(`Failed to fetch directory info for ${directoryId}`)
         return this.getFallbackDirectoryInfo(directoryId)
       }
 
       const data = await response.json()
+      
       const dirInfo: DirectoryInfo = {
         ...data,
         lastModified: new Date()
@@ -53,9 +66,9 @@ class DirectoryService {
     }
   }
 
-  async getAllDirectories(): Promise<DirectoryInfo[]> {
+  async getAllDirectories(platform?: string): Promise<DirectoryInfo[]> {
     const directories = await Promise.allSettled(
-      UPLOAD_FOLDERS.map(folder => this.getDirectoryInfo(folder.id))
+      UPLOAD_FOLDERS.map(folder => this.getDirectoryInfo(folder.id, platform))
     )
 
     return directories
@@ -66,11 +79,12 @@ class DirectoryService {
   }
 
 
-  async getDirectoryFiles(directoryId: string): Promise<FileInfo[]> {
+  async getDirectoryFiles(directoryId: string, platform?: string): Promise<FileInfo[]> {
     try {
       // Always fetch fresh data - no caching
       const timestamp = Date.now()
-      const response = await fetch(`/api/media-manager/files/${directoryId}?t=${timestamp}`)
+      const platformParam = platform ? `&platform=${platform}` : ''
+      const response = await fetch(`/api/media-manager/files/${directoryId}?t=${timestamp}${platformParam}`)
       if (!response.ok) {
         return []
       }
@@ -90,6 +104,8 @@ class DirectoryService {
   }
 
   private getFallbackDirectoryInfo(directoryId: string): DirectoryInfo {
+    console.log('🔄 Using fallback data for directory:', directoryId)
+    
     const folder = UPLOAD_FOLDERS.find(f => f.id === directoryId)
     if (!folder) {
       throw new Error(`Unknown directory: ${directoryId}`)
@@ -123,17 +139,17 @@ class DirectoryService {
   }
 
   // Force refresh all directory data by clearing cache and reloading
-  async forceRefreshAll(): Promise<DirectoryInfo[]> {
+  async forceRefreshAll(platform?: string): Promise<DirectoryInfo[]> {
     console.log('🔄 Force refreshing all directory data...')
     
     // Clear all caches completely
     cacheManager.clear()
     
     // Force reload from API
-    return this.getAllDirectories()
+    return this.getAllDirectories(platform)
   }
 
-  refreshDirectory(directoryId: string): Promise<DirectoryInfo | null> {
+  refreshDirectory(directoryId: string, platform?: string): Promise<DirectoryInfo | null> {
     // Clear specific directory caches
     cacheManager.delete(`dir_${directoryId}`)
     cacheManager.delete(`files_${directoryId}`)
@@ -142,7 +158,7 @@ class DirectoryService {
     cacheManager.delete('directory_stats')
     
     console.log(`🔄 Refreshed cache for directory: ${directoryId}`)
-    return this.getDirectoryInfo(directoryId)
+    return this.getDirectoryInfo(directoryId, platform)
   }
 
   getCacheStats() {

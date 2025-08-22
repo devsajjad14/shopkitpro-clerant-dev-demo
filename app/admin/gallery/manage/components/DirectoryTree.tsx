@@ -66,6 +66,7 @@ const DirectoryTree = memo(function DirectoryTree() {
                 <button 
                   onClick={(e) => {
                     e.stopPropagation()
+                    console.log('🔄 Force refresh button clicked')
                     forceRefresh()
                   }}
                   className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
@@ -84,32 +85,51 @@ const DirectoryTree = memo(function DirectoryTree() {
 
         {/* Subdirectories */}
         {rootExpanded && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="pl-6 pb-4 space-y-1"
-          >
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <LoadingSpinner size="md" />
-                <span className="ml-3 text-gray-600 dark:text-gray-400">Loading directories...</span>
-              </div>
-            ) : directories.length > 0 ? (
-              directories.map((directory) => (
-                <FolderItem
-                  key={directory.id}
-                  directory={directory}
-                  onToggle={toggleDirectory}
-                  onRefresh={refreshDirectory}
-                />
-              ))
-            ) : (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                No directories found
-              </div>
-            )}
-          </motion.div>
+          <div className="pl-6 pb-4 space-y-1">
+            {/* ALWAYS SHOW BASIC FOLDERS - NO LOADING CONDITIONS */}
+            <FolderItem
+              key="products"
+              directory={{
+                id: 'products',
+                name: 'products',
+                path: '/products',
+                description: 'Product images',
+                icon: '📦',
+                fileCount: 597,
+                totalSize: 0,
+                files: [],
+                isExpanded: false
+              }}
+              onToggle={toggleDirectory}
+              onRefresh={refreshDirectory}
+            />
+            <FolderItem
+              key="mini-banners"
+              directory={{
+                id: 'mini-banners',
+                name: 'mini-banners',
+                path: '/mini-banners',
+                description: 'Mini banner images',
+                icon: '🎨',
+                fileCount: 3,
+                totalSize: 0,
+                files: [],
+                isExpanded: false
+              }}
+              onToggle={toggleDirectory}
+              onRefresh={refreshDirectory}
+            />
+            
+            {/* ALSO SHOW DYNAMIC DIRECTORIES IF AVAILABLE */}
+            {directories.map((directory) => (
+              <FolderItem
+                key={`dynamic-${directory.id}`}
+                directory={directory}
+                onToggle={toggleDirectory}
+                onRefresh={refreshDirectory}
+              />
+            ))}
+          </div>
         )}
         </div>
       </div>

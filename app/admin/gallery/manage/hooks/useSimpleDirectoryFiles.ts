@@ -1,22 +1,22 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { directoryService } from '../services/directory-service'
-import type { FileInfo } from '../services/directory-service'
-import useSettingStore from '@/hooks/use-setting-store'
+import { simpleDirectoryService } from '../services/simple-directory-service'
+import type { FileInfo } from '../services/simple-directory-service'
 
-export function useDirectoryFiles(directoryId: string | null) {
+export function useSimpleDirectoryFiles(directoryId: string | null) {
   const [files, setFiles] = useState<FileInfo[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const platform = useSettingStore((state) => state.getPlatform())
 
   const loadFiles = useCallback(async (dirId: string) => {
     try {
       setLoading(true)
       setError(null)
       
-      const filesData = await directoryService.getDirectoryFiles(dirId, platform)
+      console.log('Loading files for directory:', dirId)
+      const filesData = await simpleDirectoryService.getDirectoryFiles(dirId)
+      console.log('Loaded', filesData.length, 'files')
       setFiles(filesData)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load files')
@@ -24,7 +24,7 @@ export function useDirectoryFiles(directoryId: string | null) {
     } finally {
       setLoading(false)
     }
-  }, [platform])
+  }, [])
 
   useEffect(() => {
     if (directoryId) {
@@ -34,13 +34,6 @@ export function useDirectoryFiles(directoryId: string | null) {
       setError(null)
     }
   }, [directoryId, loadFiles])
-
-  // Reload when platform changes
-  useEffect(() => {
-    if (directoryId && platform) {
-      loadFiles(directoryId)
-    }
-  }, [platform, directoryId, loadFiles])
 
   const refreshFiles = useCallback(() => {
     if (directoryId) {

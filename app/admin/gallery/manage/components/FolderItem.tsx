@@ -2,7 +2,7 @@
 
 import { memo, useState, Suspense, lazy } from 'react'
 import { motion } from 'framer-motion'
-import { FiFolder, FiChevronRight, FiFile, FiRefreshCw, FiImage, FiChevronLeft, FiChevronsLeft, FiChevronsRight } from 'react-icons/fi'
+import { FiFolder, FiChevronRight, FiFile, FiRefreshCw, FiImage, FiChevronLeft, FiChevronsLeft, FiChevronsRight, FiSearch, FiTrash2, FiX } from 'react-icons/fi'
 import { useDirectoryFiles } from '../hooks/useDirectoryFiles'
 import { directoryService } from '../services/directory-service'
 import LoadingSpinner from './ui/LoadingSpinner'
@@ -24,33 +24,36 @@ const FolderItem = memo(function FolderItem({
   onToggle, 
   onRefresh 
 }: FolderItemProps) {
-  const [showFiles, setShowFiles] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [previewFile, setPreviewFile] = useState<FileInfo | null>(null)
   const [deleteFile, setDeleteFile] = useState<FileInfo | null>(null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+  
   const { files, loading, refreshFiles } = useDirectoryFiles(
-    showFiles ? directory.id : null
+    directory.isExpanded ? directory.id : null
+  )
+
+  // Search filtering
+  const filteredFiles = files.filter(file => 
+    file.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   // Pagination settings
   const filesPerPage = 10
-  const totalPages = Math.ceil(files.length / filesPerPage)
+  const totalPages = Math.ceil(filteredFiles.length / filesPerPage)
   const startIndex = (currentPage - 1) * filesPerPage
   const endIndex = startIndex + filesPerPage
-  const currentFiles = files.slice(startIndex, endIndex)
-
-  // Debug log to verify component is rendering
-  console.log('🔍 FolderItem rendering:', directory.name, 'expanded:', directory.isExpanded, 'files:', files.length)
+  const currentFiles = filteredFiles.slice(startIndex, endIndex)
 
   const handleToggle = () => {
-    console.log('🔄 Toggle folder:', directory.name, 'currently expanded:', directory.isExpanded)
     onToggle(directory.id)
-    if (!directory.isExpanded) {
-      setShowFiles(true)
-      setCurrentPage(1) // Reset to first page when opening
-    } else {
-      setShowFiles(false)
-      setCurrentPage(1) // Reset pagination when closing
+    // Reset states when toggling
+    setCurrentPage(1)
+    if (directory.isExpanded) {
+      // Closing folder - clear search
+      setSearchTerm('')
     }
   }
 
@@ -102,6 +105,48 @@ const FolderItem = memo(function FolderItem({
     }
   }
 
+  const handleDeleteAll = async () => {
+    try {
+      setIsDeleting(true)
+      console.log('🗑️ Deleting all files in directory:', directory.name)
+      
+      // Delete all files in parallel
+      const deletePromises = files.map(file => directoryService.deleteFile(file.url || ''))
+      const results = await Promise.allSettled(deletePromises)
+      
+      // Count successful deletions
+      const successCount = results.filter(result => result.status === 'fulfilled' && result.value === true).length
+      const failCount = files.length - successCount
+      
+      console.log(`✅ Delete completed: ${successCount} successful, ${failCount} failed`)
+      
+      // Refresh the file list and directory info
+      refreshFiles()
+      onRefresh?.(directory.id)
+      setShowDeleteAllConfirm(false)
+      
+      if (failCount > 0) {
+        throw new Error(`${failCount} files failed to delete`)
+      }
+    } catch (error) {
+      console.error('❌ Error deleting files:', error)
+      // Don't close modal on error, let user try again
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setSearchTerm(value)
+    setCurrentPage(1) // Reset to first page when searching
+  }
+
+  const clearSearch = () => {
+    setSearchTerm('')
+    setCurrentPage(1)
+  }
+
   return (
     <div className={`${directory.isExpanded ? 'bg-gray-50/50 dark:bg-gray-800/30' : ''} rounded-lg`}>
       {/* Folder Header */}
@@ -129,6 +174,7 @@ const FolderItem = memo(function FolderItem({
               {directory.icon} {directory.name}/
             </span>
             <div className="flex items-center gap-2">
+              
               {onRefresh && (
                 <button
                   onClick={handleRefresh}
@@ -139,7 +185,13 @@ const FolderItem = memo(function FolderItem({
                 </button>
               )}
               <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-0.5 rounded-full">
-                {directory.fileCount} files
+                {loading ? (
+                  'Loading...'
+                ) : searchTerm && directory.isExpanded ? (
+                  `${filteredFiles.length}/${files.length}`
+                ) : (
+                  `${files.length || directory.fileCount} files`
+                )}
               </span>
             </div>
           </div>
@@ -149,18 +201,14 @@ const FolderItem = memo(function FolderItem({
 
       {/* File List */}
       {directory.isExpanded && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
-          className="pl-8 pb-3 space-y-1"
-        >
+        <div className="pl-8 pb-3 space-y-1">
           {loading ? (
             <div className="flex items-center justify-center py-4">
               <LoadingSpinner size="sm" />
               <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Loading files...</span>
             </div>
-          ) : files.length > 0 ? (
+          ) : null}
+          {!loading && files.length > 0 ? (
             <>
               {/* File List - Paginated */}
               {currentFiles.map((file, index) => (
@@ -195,7 +243,8 @@ const FolderItem = memo(function FolderItem({
               {totalPages > 1 && (
                 <div className="flex items-center justify-between py-3 px-2 bg-gray-50/50 dark:bg-gray-800/50 rounded-lg mt-2">
                   <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Showing {startIndex + 1}-{Math.min(endIndex, files.length)} of {files.length} files
+                    Showing {startIndex + 1}-{Math.min(endIndex, filteredFiles.length)} of {filteredFiles.length} files
+                    {searchTerm && ` (filtered from ${files.length} total)`}
                   </div>
                   
                   <div className="flex items-center gap-1">
@@ -291,8 +340,9 @@ const FolderItem = memo(function FolderItem({
             <div className="text-center py-4 text-xs text-gray-500 dark:text-gray-400">
               No files found
             </div>
-          )}
-        </motion.div>
+          )
+          }
+        </div>
       )}
 
       {/* Modals - Lazy loaded */}
@@ -318,6 +368,76 @@ const FolderItem = memo(function FolderItem({
             directoryName={directory.name}
           />
         </Suspense>
+      )}
+
+      {/* Delete All Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4" style={{ margin: 0, padding: '1rem' }}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ type: "spring", duration: 0.5 }}
+            className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/50 p-8 w-full max-w-lg mx-auto"
+            style={{ 
+              maxHeight: 'calc(100vh - 2rem)',
+              overflowY: 'auto',
+              position: 'relative'
+            }}
+          >
+            <div className="flex items-start gap-4 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-red-200 dark:from-red-900/40 dark:to-red-800/40 rounded-xl flex items-center justify-center shadow-lg">
+                <FiTrash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">
+                  Delete All Files
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 bg-gray-100/60 dark:bg-gray-700/60 px-2 py-1 rounded-md inline-block">
+                  📁 {directory.name}/ folder
+                </p>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-r from-amber-50 to-red-50 dark:from-amber-900/20 dark:to-red-900/20 border border-amber-200/60 dark:border-amber-700/60 rounded-lg p-4 mb-6">
+              <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                You're about to permanently delete <span className="font-bold text-red-600 dark:text-red-400">{files.length} files</span> from this folder.
+              </p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-2 font-medium">
+                ⚠️ This action cannot be undone
+              </p>
+            </div>
+            
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowDeleteAllConfirm(false)}
+                disabled={isDeleting}
+                className="px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100/80 dark:bg-gray-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl transition-all duration-200 backdrop-blur-sm border border-gray-200/60 dark:border-gray-600/60 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAll}
+                disabled={isDeleting}
+                className="group px-5 py-2.5 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:scale-100"
+              >
+                <span className="flex items-center gap-2">
+                  {isDeleting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <FiTrash2 className="w-4 h-4 group-hover:rotate-12 transition-transform duration-200" />
+                      Delete All Files
+                    </>
+                  )}
+                </span>
+              </button>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   )
