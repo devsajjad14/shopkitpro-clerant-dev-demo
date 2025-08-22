@@ -5,8 +5,16 @@ import { Providers } from './providers'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as SonnerToaster } from 'sonner'
 import { SetupStatusProvider } from '@/components/setup-wizard/SetupStatusProvider'
-// Using system font to avoid CSS unicode issues
-const fontClass = 'font-sans'
+import { Inter } from 'next/font/google'
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-inter',
+  weight: ['400', '500', '600', '700'],
+  fallback: ['system-ui', 'arial'],
+  adjustFontFallback: false, // Prevent unicode range issues
+})
 
 export const metadata: Metadata = {
   title: 'ShopKit Pro - E-commerce Platform',
@@ -15,8 +23,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={fontClass} suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body suppressHydrationWarning>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
