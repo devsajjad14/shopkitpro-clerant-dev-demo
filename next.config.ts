@@ -41,40 +41,10 @@ const nextConfig: NextConfig = {
     ]
   },
   
-  // Next.js 15 experimental features
+  // Essential experimental features only
   experimental: {
-    // React Compiler (requires canary, disabled for stable build)
-    // reactCompiler: true,
-    
-    // Advanced caching
+    // Required for 'use cache' directive
     useCache: true,
-    cacheLife: {
-      default: {
-        stale: 300, // 5 minutes
-        revalidate: 900, // 15 minutes  
-        expire: 3600, // 1 hour
-      },
-      long: {
-        stale: 3600, // 1 hour
-        revalidate: 86400, // 1 day
-        expire: 604800, // 1 week
-      },
-      biweekly: {
-        stale: 60 * 60 * 24 * 14, // 14 days
-        revalidate: 60 * 60 * 24 * 7, // 7 days
-        expire: 60 * 60 * 24 * 14, // 14 days
-      },
-    },
-    
-    // Performance optimizations
-    optimizePackageImports: [
-      '@radix-ui/react-icons',
-      '@heroicons/react',
-      'lucide-react',
-      'react-icons',
-    ],
-    
-    // Turbopack rules moved to stable config
   },
   
   // Turbopack configuration (stable in Next.js 15)
@@ -162,58 +132,25 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Ensure CSS processing works correctly in production
-  generateBuildId: async () => {
-    return 'build-' + Date.now()
-  },
+  // Generate stable build ID - removed to prevent chunk loading issues
+  // generateBuildId: async () => {
+  //   return 'build-' + Date.now()
+  // },
 
   outputFileTracingIncludes: {
     '/api/**/*': ['./lib/**/*', './types/**/*', './utils/**/*'],
     '/api/data-manager/**/*': ['./lib/data.ts', './lib/utils.ts'],
   },
   
-  // Bundle optimization - Simplified to prevent build hangs
-  webpack: (config, { buildId, dev, isServer, defaultLoaders, webpack }) => {
-    // Only apply minimal optimizations to avoid build issues
-    if (!dev && !isServer) {
-      // Use Next.js default chunking with size limit only
-      config.optimization.splitChunks = {
-        ...config.optimization.splitChunks,
-        maxSize: 244000, // ~240KB chunks
-      }
-    }
-    
-    // Server-side bundle size optimization
+  // Minimal webpack config - only essential optimizations to avoid chunk loading issues
+  webpack: (config, { isServer }) => {
+    // Only server-side optimizations (these work fine)
     if (isServer) {
-      // Exclude unnecessary packages from server bundle
+      // Exclude unnecessary packages from server bundle  
       config.externals = [...(config.externals || []), {
         'canvas': 'canvas',
         'sharp': 'sharp',
-        '@next/font': '@next/font',
       }]
-      
-      // Minimize server bundle
-      config.optimization.minimize = true
-    }
-    
-    // Exclude large files from bundle
-    config.module.rules.push({
-      test: /\.(jpg|jpeg|png|gif|webp|avif)$/,
-      type: 'asset/resource',
-      generator: {
-        filename: 'static/media/[name].[hash][ext]',
-      },
-    })
-    
-    // Add bundle analyzer in development
-    if (process.env.ANALYZE === 'true') {
-      const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer')
-      config.plugins.push(
-        new BundleAnalyzerPlugin({
-          analyzerMode: 'static',
-          openAnalyzer: false,
-        })
-      )
     }
     
     return config
@@ -241,11 +178,11 @@ const nextConfig: NextConfig = {
     ignoreDuringBuilds: true,
   },
   
-  // Performance budgets
-  onDemandEntries: {
-    maxInactiveAge: 25 * 1000,
-    pagesBufferLength: 2,
-  },
+  // Performance budgets - removed to prevent chunk loading issues
+  // onDemandEntries: {
+  //   maxInactiveAge: 25 * 1000,
+  //   pagesBufferLength: 2,
+  // },
 }
 
 export default nextConfig
