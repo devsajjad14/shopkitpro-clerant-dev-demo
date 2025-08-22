@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob: *.vercel-storage.com; font-src 'self'; connect-src 'self' *.vercel-storage.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
+value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob: *.vercel-storage.com; font-src 'self' data:; connect-src 'self' *.vercel-storage.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self';",
           },
           {
             key: 'Strict-Transport-Security',
@@ -32,10 +32,11 @@ const nextConfig: NextConfig = {
             key: 'X-Frame-Options',
             value: 'DENY',
           },
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
+          // Temporarily disabled - may cause chunk loading issues
+          // {
+          //   key: 'Cache-Control',
+          //   value: 'public, max-age=31536000, immutable',
+          // },
         ],
       },
     ]
@@ -47,26 +48,19 @@ const nextConfig: NextConfig = {
     useCache: true,
   },
   
-  // Turbopack configuration (stable in Next.js 15)
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
+  // Turbopack configuration - removed to fix chunk loading issues
+  // turbopack: {
+  //   rules: {
+  //     '*.svg': {
+  //       loaders: ['@svgr/webpack'],
+  //       as: '*.js',
+  //     },
+  //   },
+  // },
   
-  // Enhanced image optimization
+  // Simplified image optimization
   images: {
-    minimumCacheTTL: 31536000, // 1 year
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    formats: ['image/avif', 'image/webp'],
-    dangerouslyAllowSVG: false,
-    contentDispositionType: 'attachment',
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-    
+    formats: ['image/webp'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -132,25 +126,52 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // Generate stable build ID - removed to prevent chunk loading issues
-  // generateBuildId: async () => {
-  //   return 'build-' + Date.now()
-  // },
+  // Generate stable build ID for consistent chunk naming
+  generateBuildId: async () => {
+    // Use a stable ID for better chunk caching
+    return process.env.VERCEL_GIT_COMMIT_SHA || 'local-build'
+  },
 
   outputFileTracingIncludes: {
     '/api/**/*': ['./lib/**/*', './types/**/*', './utils/**/*'],
     '/api/data-manager/**/*': ['./lib/data.ts', './lib/utils.ts'],
   },
   
-  // Minimal webpack config - only essential optimizations to avoid chunk loading issues
-  webpack: (config, { isServer }) => {
-    // Only server-side optimizations (these work fine)
+  // Webpack config - Keep 250MB optimization but fix chunk loading
+  webpack: (config, { isServer, dev }) => {
+    // Server-side optimizations (for 250MB limit)
     if (isServer) {
-      // Exclude unnecessary packages from server bundle  
       config.externals = [...(config.externals || []), {
         'canvas': 'canvas',
         'sharp': 'sharp',
       }]
+    }
+
+    // Optimize chunks for Vercel compatibility - client-side only
+    if (!dev && !isServer) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        maxSize: 244000, // Keep your 240KB chunk limit
+        cacheGroups: {
+          // Simple, reliable chunk strategy for client only
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            chunks: 'all',
+            priority: 20,
+          },
+          common: {
+            minChunks: 2,
+            chunks: 'all', 
+            name: 'common',
+            priority: 10,
+          },
+        },
+      }
+      
+      // Ensure stable chunk names for Vercel
+      config.optimization.moduleIds = 'deterministic'
+      config.optimization.chunkIds = 'deterministic'
     }
     
     return config

@@ -1,4 +1,3 @@
-import './globals.css'
 import { CartProvider } from '@/components/providers/CartProvider'
 import { Providers } from './providers'
 import { Suspense } from 'react'

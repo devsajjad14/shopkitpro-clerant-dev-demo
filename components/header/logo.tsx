@@ -13,7 +13,7 @@ export default function Logo() {
         width={120}
         height={40}
         priority
-        className='w-auto h-20' // Fixed aspect ratio
+        style={{ width: 'auto', height: '80px' }} // Maintain aspect ratio
       />
     </Link>
   )
