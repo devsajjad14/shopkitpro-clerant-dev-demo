@@ -11,7 +11,7 @@ import HomeCarousel from '@/components/home/home-carousel'
 import { ProductCardSkeleton } from '@/components/skeletons/product-card-skeleton'
 import { CompanyIntroSkeleton } from '@/components/skeletons/company-intro-skeleton'
 import { BrandLogosSkeleton } from '@/components/skeletons/brand-logos-skeleton'
-import { getBrands } from '@/lib/actions/home/brands'
+// Removed getBrands import - now using static placeholders
 import { getFeaturedProducts } from '@/lib/actions/home/featured-products'
 import { getSettings } from '@/lib/actions/settings'
 
@@ -53,12 +53,11 @@ export default async function HomePage() {
   const brandLogosCount = Number(settings.brandLogos) || 6
   const showCompanySection = parseBoolean(settings.showCompanySection)
 
-  // Always use local data for featured products and brands
+  // Always use local data for featured products 
   const featuredProducts = await getFeaturedProducts(featuredProductsCount)
-  const [carouselData, miniBanners, brandsData] = await Promise.all([
+  const [carouselData, miniBanners] = await Promise.all([
     getCarouselData(mainBannersCount),
     getMiniBanners(miniBannersCount),
-    getBrands(brandLogosCount),
   ])
 
   return (
@@ -81,17 +80,15 @@ export default async function HomePage() {
         </ErrorBoundary>
 
         {/* Company Intro */}
-        {showCompanySection && (
-          <ErrorBoundary fallback={<div>Failed to load company intro.</div>}>
-            <section className='mt-8 mb-8 px-0 sm:px-4'>
-              <div className='rounded-2xl overflow-hidden'>
-                <Suspense fallback={<CompanyIntroSkeleton />}>
-                  <CompanyIntro />
-                </Suspense>
-              </div>
-            </section>
-          </ErrorBoundary>
-        )}
+        <ErrorBoundary fallback={<div>Failed to load company intro.</div>}>
+          <section className={`mt-8 mb-8 px-0 sm:px-4 ${!showCompanySection ? 'hidden' : ''}`}>
+            <div className='rounded-2xl overflow-hidden'>
+              <Suspense fallback={<CompanyIntroSkeleton />}>
+                <CompanyIntro />
+              </Suspense>
+            </div>
+          </section>
+        </ErrorBoundary>
 
         {/* Featured Products */}
         <ErrorBoundary fallback={<ProductSliderSkeleton />}>
@@ -106,13 +103,7 @@ export default async function HomePage() {
         <ErrorBoundary fallback={<div>Failed to load brand logos.</div>}>
           <section className='mt-8 pb-12 px-0 sm:px-4'>
             <div className='rounded-2xl overflow-hidden'>
-              <Suspense fallback={<BrandLogosSkeleton />}>
-                {brandsData.length > 0 ? (
-                  <BrandLogoSlider brandLogos={brandsData} />
-                ) : (
-                  <div className='h-32 bg-gray-200 animate-pulse rounded-lg' />
-                )}
-              </Suspense>
+              <BrandLogoSlider />
             </div>
           </section>
         </ErrorBoundary>
