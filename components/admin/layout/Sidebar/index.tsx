@@ -324,7 +324,7 @@ export function Sidebar({ className }: { className?: string }) {
                 isOpen={isOpen}
               />
               <NavItem
-                href='/admin/media/sync'
+                href='/admin/gallery/sync'
                 label='Sync Media'
                 nested
                 isOpen={isOpen}
