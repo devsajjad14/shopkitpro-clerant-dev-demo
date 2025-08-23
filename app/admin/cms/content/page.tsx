@@ -3,20 +3,68 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { FiToggleLeft, FiToggleRight, FiExternalLink, FiZap, FiLayers, FiSettings, FiEdit3, FiEye } from 'react-icons/fi'
+import { updateSetting } from '@/lib/actions/settings'
+import { toast, Toaster } from 'sonner'
+import useSettingStore from '@/hooks/use-setting-store'
 
 export default function CMSPage() {
-  const [customCMSEnabled, setCustomCMSEnabled] = useState(false)
-  const [builderIOEnabled, setBuilderIOEnabled] = useState(false)
+  const { getSetting, updateSetting: updateSettingStore, isLoaded } = useSettingStore()
+  const [isSaving, setIsSaving] = useState(false)
 
-  const handleToggle = (type: 'custom' | 'builder') => {
-    if (type === 'custom') {
-      setCustomCMSEnabled(!customCMSEnabled)
-      setBuilderIOEnabled(false)
-    } else {
-      setBuilderIOEnabled(!builderIOEnabled)
-      setCustomCMSEnabled(false)
+  // Get CMS type from global store
+  const cmsType = (getSetting('cmsType') || 'no_cms') as 'no_cms' | 'custom_cms' | 'builder_io'
+
+  const handleToggle = async (type: 'custom_cms' | 'builder_io') => {
+    if (isSaving) return
+
+    setIsSaving(true)
+    try {
+      // Toggle logic: if same type is clicked, disable (set to no_cms)
+      const newCmsType = cmsType === type ? 'no_cms' : type
+      
+      const result = await updateSetting('cmsType', newCmsType)
+      if (result.success) {
+        // Update global store immediately
+        updateSettingStore('cmsType', newCmsType)
+        
+        toast.success('CMS setting updated successfully', {
+          description: `${newCmsType === 'no_cms' ? 'CMS disabled' : 
+            newCmsType === 'custom_cms' ? 'Custom CMS activated' : 'Builder.io activated'}`,
+          duration: 3000,
+          position: 'top-right',
+          style: {
+            background: '#10B981',
+            color: 'white',
+            border: 'none',
+          },
+        })
+      } else {
+        toast.error('Failed to update CMS setting', {
+          description: result.error || 'Please try again',
+          duration: 5000,
+          position: 'top-right',
+          style: {
+            background: '#EF4444',
+            color: 'white',
+            border: 'none',
+          },
+        })
+      }
+    } catch (error) {
+      console.error('Error updating CMS setting:', error)
+      toast.error('Failed to update CMS setting', {
+        description: 'An unexpected error occurred',
+        duration: 5000,
+        position: 'top-right',
+      })
+    } finally {
+      setIsSaving(false)
     }
   }
+
+  // Computed states for UI
+  const customCMSEnabled = cmsType === 'custom_cms'
+  const builderIOEnabled = cmsType === 'builder_io'
 
   const openCMS = (type: 'custom' | 'builder') => {
     const url = type === 'custom' 
@@ -25,8 +73,17 @@ export default function CMSPage() {
     window.open(url, '_blank')
   }
 
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00437f]"></div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-8">
+      <Toaster position="top-right" richColors />
       <div className="max-w-6xl mx-auto space-y-8">
         {/* Premium Header */}
         <div className="relative">
@@ -49,9 +106,10 @@ export default function CMSPage() {
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 px-4 py-2 bg-white/80 dark:bg-gray-700/80 rounded-xl border border-gray-200 dark:border-gray-600">
-                <div className={`w-3 h-3 rounded-full ${customCMSEnabled || builderIOEnabled ? 'bg-green-500' : 'bg-gray-300'}`} />
+                <div className={`w-3 h-3 rounded-full ${cmsType !== 'no_cms' ? 'bg-green-500' : 'bg-gray-300'}`} />
                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {customCMSEnabled ? 'Custom CMS Active' : builderIOEnabled ? 'Builder.io Active' : 'No CMS Active'}
+                  {cmsType === 'custom_cms' ? 'Custom CMS Active' : 
+                   cmsType === 'builder_io' ? 'Builder.io Active' : 'No CMS Active'}
                 </span>
               </div>
             </div>
@@ -94,10 +152,11 @@ export default function CMSPage() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => handleToggle('custom')}
+                    onClick={() => handleToggle('custom_cms')}
+                    disabled={isSaving}
                     className={`relative w-16 h-8 rounded-full transition-all duration-300 ${
                       customCMSEnabled ? 'bg-white/30' : 'bg-gray-200 dark:bg-gray-600'
-                    }`}
+                    } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <motion.div
                       animate={{ x: customCMSEnabled ? 32 : 4 }}
@@ -138,9 +197,9 @@ export default function CMSPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => openCMS('custom')}
-                  disabled={!customCMSEnabled}
+                  disabled={!customCMSEnabled || isSaving}
                   className={`w-full py-4 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${
-                    customCMSEnabled
+                    customCMSEnabled && !isSaving
                       ? 'bg-white text-[#00437f] hover:bg-white/90 shadow-lg transform hover:scale-105'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                   }`}
@@ -191,10 +250,11 @@ export default function CMSPage() {
                   <motion.button
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
-                    onClick={() => handleToggle('builder')}
+                    onClick={() => handleToggle('builder_io')}
+                    disabled={isSaving}
                     className={`relative w-16 h-8 rounded-full transition-all duration-300 ${
                       builderIOEnabled ? 'bg-white/30' : 'bg-gray-200 dark:bg-gray-600'
-                    }`}
+                    } ${isSaving ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <motion.div
                       animate={{ x: builderIOEnabled ? 32 : 4 }}
@@ -235,9 +295,9 @@ export default function CMSPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => openCMS('builder')}
-                  disabled={!builderIOEnabled}
+                  disabled={!builderIOEnabled || isSaving}
                   className={`w-full py-4 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-3 ${
-                    builderIOEnabled
+                    builderIOEnabled && !isSaving
                       ? 'bg-white text-gray-800 hover:bg-white/90 shadow-lg transform hover:scale-105'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
                   }`}

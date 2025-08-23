@@ -8,6 +8,8 @@ export async function GET() {
     const colorSettings = await getSettings('colors')
     const storeSettings = await getSettings('store')
     const brandingSettings = await getSettings('branding')
+    const themeSettings = await getSettings('theme')
+    const cmsSettings = await getSettings('cms')
     
     // Combine all settings
     const allSettings = {
@@ -15,6 +17,8 @@ export async function GET() {
       ...colorSettings,
       ...storeSettings,
       ...brandingSettings,
+      ...themeSettings,
+      ...cmsSettings,
     }
     
     return NextResponse.json({

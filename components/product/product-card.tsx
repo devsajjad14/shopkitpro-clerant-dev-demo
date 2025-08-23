@@ -45,7 +45,7 @@ const ProductCard = React.memo(({ product }: ProductCardProps) => {
   return (
     <Card
       key={product.STYLE_ID}
-      className='p-0 flex flex-col justify-between overflow-hidden shadow-xl hover:shadow-2xl transition-shadow duration-300 rounded-2xl bg-white border border-gray-100 hover:border-indigo-400 group/card'
+      className='p-0 flex flex-col justify-between overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-500 rounded-2xl bg-white border border-gray-200 group/card cursor-pointer'
     >
       <Link
         href={`/product/id/${product.STYLE_ID}/name/${urlFriendly(
@@ -55,7 +55,7 @@ const ProductCard = React.memo(({ product }: ProductCardProps) => {
       >
         <CardHeader className='p-0 relative bg-transparent border-none shadow-none'>
           {/* Minimalist Premium Image Container */}
-          <div className="relative aspect-[4/5] w-full max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-transparent rounded-xl transition-all duration-300 group-hover/card:scale-105">
+          <div className="relative aspect-[4/5] w-full max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-transparent rounded-xl transition-all duration-500 group-hover/card:scale-105">
             <Image
               loader={alumnihallLoader}
               src={product.MEDIUMPICTURE}

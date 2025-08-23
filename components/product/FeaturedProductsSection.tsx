@@ -8,5 +8,9 @@ export default function FeaturedProductsSection({
 }: {
   featuredProducts: Product[]
 }) {
-  return <ProductSlider title='Featured Products' products={featuredProducts} />
+  return (
+    <div className="py-8 bg-white">
+      <ProductSlider title='Featured Products' products={featuredProducts} />
+    </div>
+  )
 }

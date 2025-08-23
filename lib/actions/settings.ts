@@ -11,7 +11,7 @@ const settingSchema = z.object({
   key: z.string(),
   value: z.string(),
   type: z.enum(['string', 'number', 'boolean', 'json', 'file']),
-  group: z.enum(['general', 'branding', 'colors', 'store', 'theme']),
+  group: z.enum(['general', 'branding', 'colors', 'store', 'theme', 'cms']),
 })
 
 interface SettingsResponse {
@@ -57,7 +57,8 @@ export async function updateSetting(key: string, value: any): Promise<SettingsRe
     if (!setting) {
       const group = key === 'logo' || key === 'favicon' ? 'branding' : 
                    key.includes('Color') ? 'colors' : 
-                   key.startsWith('store') ? 'store' : 'general'
+                   key.startsWith('store') ? 'store' : 
+                   key === 'cmsType' ? 'cms' : 'general'
       
       const type = key === 'logo' || key === 'favicon' ? 'file' : 'string'
       
@@ -79,6 +80,7 @@ export async function updateSetting(key: string, value: any): Promise<SettingsRe
 
 
     revalidatePath('/admin/settings/general')
+    revalidatePath('/admin/cms/content')
     return { 
       success: true,
       message: 'Setting updated successfully'
@@ -107,7 +109,8 @@ export async function updateMultipleSettings(settingsData: Record<string, any>):
                      key.startsWith('featuredProducts') || key.startsWith('brandLogos') ||
                      key.startsWith('productsPerPage') || key.startsWith('relatedProducts') ||
                      key.startsWith('show') || key.startsWith('defaultViewMode') ||
-                     key.startsWith('enableFilters') ? 'theme' : 'general'
+                     key.startsWith('enableFilters') ? 'theme' : 
+                     key === 'cmsType' ? 'cms' : 'general'
         
         const type = key === 'logo' || key === 'favicon' ? 'file' : 
                     key.startsWith('show') || key === 'enableFilters' ? 'boolean' :
@@ -130,7 +133,8 @@ export async function updateMultipleSettings(settingsData: Record<string, any>):
                      key.startsWith('featuredProducts') || key.startsWith('brandLogos') ||
                      key.startsWith('productsPerPage') || key.startsWith('relatedProducts') ||
                      key.startsWith('show') || key.startsWith('defaultViewMode') ||
-                     key.startsWith('enableFilters') ? 'theme' : 'general'
+                     key.startsWith('enableFilters') ? 'theme' : 
+                     key === 'cmsType' ? 'cms' : 'general'
 
         await db
           .update(settings)
@@ -149,6 +153,7 @@ export async function updateMultipleSettings(settingsData: Record<string, any>):
     }
 
     revalidatePath('/admin/settings/theme')
+    revalidatePath('/admin/cms/content')
     return { 
       success: true,
       message: 'Settings updated successfully'
