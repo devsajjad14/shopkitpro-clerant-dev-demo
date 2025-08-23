@@ -3,14 +3,14 @@
 import ProductSlider from '@/components/product/product-slider'
 import { Product } from '@/types/product-types'
 
-export default function FeaturedProductsSection({
+function FeaturedProductsSection({
   featuredProducts,
 }: {
   featuredProducts: Product[]
 }) {
   return (
-    <div className="py-8 bg-white">
-      <ProductSlider title='Featured Products' products={featuredProducts} />
-    </div>
+    <ProductSlider title='Featured Products' products={featuredProducts} />
   )
 }
+
+export default FeaturedProductsSection

@@ -24,7 +24,7 @@ const FeaturedProductsSection = dynamic(
   () => import('@/components/product/FeaturedProductsSection'),
   {
     loading: () => <ProductSliderSkeleton />,
-    ssr: true, // Keep SSR for featured products as they're important
+    ssr: false
   }
 )
 
@@ -59,12 +59,36 @@ function PremiumHeroCarouselPlaceholder() {
   const [currentSlide, setCurrentSlide] = React.useState(0)
   const [isTransitioning, setIsTransitioning] = React.useState(false)
   const [isMobile, setIsMobile] = React.useState(false)
+  const [touchStart, setTouchStart] = React.useState(0)
+  const [touchEnd, setTouchEnd] = React.useState(0)
   
   // Simplified mobile detection with immediate render
   React.useEffect(() => {
     const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768
     setIsMobile(isMobileDevice)
   }, [])
+
+  // Touch handlers for mobile swipe
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX)
+  }
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return
+    const distance = touchStart - touchEnd
+    const isLeftSwipe = distance > 50
+    const isRightSwipe = distance < -50
+
+    if (isLeftSwipe) {
+      nextSlide()
+    } else if (isRightSwipe) {
+      prevSlide()
+    }
+  }
   
   const slides = [
     {
@@ -111,16 +135,13 @@ function PremiumHeroCarouselPlaceholder() {
     setTimeout(() => setIsTransitioning(false), 600)
   }, [isTransitioning, currentSlide])
 
-  // Auto-slide functionality - optimized for performance
+  // Auto-slide functionality - works on all devices
   React.useEffect(() => {
-    // Disable auto-slide on mobile to reduce battery usage
-    if (isMobile) return
-    
     const interval = setInterval(() => {
       if (!isTransitioning && document.visibilityState === 'visible') {
         nextSlide()
       }
-    }, 6000) // Increased to 6s to reduce frequency
+    }, isMobile ? 8000 : 6000) // Slower on mobile to save battery
     
     return () => clearInterval(interval)
   }, [nextSlide, isTransitioning, isMobile])
@@ -128,29 +149,59 @@ function PremiumHeroCarouselPlaceholder() {
   const currentSlideData = slides[currentSlide]
   
   return (
-    <div className="hero-section-critical relative overflow-hidden" style={{ 
-      contain: 'layout style paint',
-      willChange: 'auto'
-    }}>
-      {/* Simplified static background for performance */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" />
+    <div 
+      className="relative w-full h-full overflow-hidden" 
+      style={{ contain: 'layout style paint' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      {/* Background */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${currentSlideData.gradient}`} />
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-blue-900/20 to-indigo-900/30" />
       
-      {/* Ultra-lightweight content for fast LCP */}
-      <div className="relative flex items-center justify-center h-full text-center px-4 sm:px-8">
-        <div className="max-w-lg">
-          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-gray-800 mb-4 leading-tight">
+      {/* Content - Perfectly centered */}
+      <div className="absolute inset-0 flex items-center justify-center text-center px-4 sm:px-8 lg:px-16">
+        <div className="max-w-xs sm:max-w-2xl lg:max-w-4xl">
+          <h1 className="text-xl sm:text-3xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-3 sm:mb-6 lg:mb-8 leading-tight">
             {currentSlideData.title}
           </h1>
-          <p className="text-sm sm:text-lg md:text-xl text-gray-600 mb-6 leading-relaxed">
+          <p className="text-sm sm:text-lg lg:text-xl text-gray-600 mb-4 sm:mb-8 lg:mb-10 leading-relaxed">
             Configure CMS to show dynamic content here
           </p>
-          <button className="inline-flex items-center px-6 py-3 bg-white/90 rounded-full text-gray-800 font-semibold shadow-md hover:shadow-lg">
+          <button className="inline-flex items-center px-4 py-2 sm:px-8 sm:py-4 lg:px-10 lg:py-5 bg-white/90 backdrop-blur-sm rounded-full text-gray-800 font-semibold shadow-lg hover:shadow-xl hover:bg-white transition-all duration-300 text-sm sm:text-lg lg:text-xl">
             <span>{currentSlideData.cta}</span>
-            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ml-1 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
             </svg>
           </button>
         </div>
+      </div>
+      
+      
+      {/* Navigation arrows - Always visible */}
+      <div>
+        <button 
+          onClick={prevSlide}
+          disabled={isTransitioning}
+          className="absolute left-8 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50"
+          aria-label="Previous slide"
+        >
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        
+        <button 
+          onClick={nextSlide}
+          disabled={isTransitioning}
+          className="absolute right-8 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50"
+          aria-label="Next slide"
+        >
+          <svg className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       </div>
     </div>
   )
@@ -199,13 +250,14 @@ function PremiumMiniBannersPlaceholder({ count }: { count: number }) {
             return (
               <div
                 key={index}
-                className='relative pb-[100%] overflow-hidden shadow-md hover:shadow-xl transition-all duration-500 rounded-2xl group cursor-pointer hover:scale-[1.02]'
+                className='relative pb-[100%] overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 rounded-2xl group cursor-pointer hover:scale-[1.02] mobile-optimized'
+                style={{ contain: 'layout style paint' }}
               >
                 <div className={`absolute inset-0 bg-gradient-to-br ${banner.gradient}`} />
                 <div className={`absolute inset-0 bg-gradient-to-b ${banner.overlay}`} />
                 
-                {/* Subtle pattern overlay for premium feel */}
-                <div className="absolute inset-0 opacity-5">
+                {/* Pattern overlay for desktop only */}
+                <div className="hidden lg:block absolute inset-0 opacity-5">
                   <div 
                     className="absolute inset-0 opacity-20"
                     style={{
@@ -215,19 +267,19 @@ function PremiumMiniBannersPlaceholder({ count }: { count: number }) {
                 </div>
                 
                 <div className='absolute inset-0 flex flex-col items-center justify-center p-6 text-center'>
-                  <h3 className='text-2xl font-bold text-gray-800 mb-2 drop-shadow-sm leading-tight'>
+                  <h3 className='text-xl sm:text-2xl font-bold text-gray-800 mb-2 drop-shadow-sm leading-tight'>
                     {banner.title}
                   </h3>
                   <p className='text-sm text-gray-600 mb-4 font-medium drop-shadow-sm'>
                     Configure CMS to show dynamic content here
                   </p>
-                  <div className='bg-white/90 backdrop-blur-sm text-gray-800 px-6 py-2.5 rounded-full font-semibold text-sm shadow-lg border border-white/20 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 hover:bg-white hover:shadow-xl'>
+                  <div className='bg-white/90 backdrop-blur-sm text-gray-800 px-6 py-2.5 rounded-full font-semibold text-sm shadow-lg border border-white/20 transform translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300 hover:bg-white hover:shadow-xl mobile-optimized'>
                     SHOP NOW
                   </div>
                 </div>
                 
-                {/* Premium corner accent */}
-                <div className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm border border-white/30 group-hover:scale-110 transition-transform duration-300">
+                {/* Corner accent */}
+                <div className="absolute top-4 right-4 w-8 h-8 bg-white/80 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm border border-white/30 group-hover:scale-110 transition-transform duration-200 mobile-optimized">
                   <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                   </svg>
@@ -307,7 +359,7 @@ function PremiumBrandLogosPlaceholder() {
               >
                 <div className="flex flex-col items-center justify-center h-full">
                   <div 
-                    className={`w-28 h-28 bg-gradient-to-br ${brand.color} rounded-lg flex items-center justify-center mb-2 shadow-lg group-hover/brand:shadow-xl group-hover/brand:scale-105 transition-all duration-300`}
+                    className={`w-28 h-28 bg-gradient-to-br ${brand.color} rounded-lg flex items-center justify-center mb-2 shadow-lg group-hover/brand:shadow-xl group-hover/brand:scale-105 transition-all duration-200 mobile-optimized`}
                     style={{ 
                       transform: 'translateZ(0)',
                       backfaceVisibility: 'hidden'
@@ -326,18 +378,14 @@ function PremiumBrandLogosPlaceholder() {
           </div>
         </div>
 
-        {/* Navigation controls */}
+        {/* Navigation controls - Always visible on mobile */}
         <button
           onClick={scrollPrev}
           disabled={isTransitioning}
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/95 hover:bg-white shadow-xl hover:shadow-2xl rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 backdrop-blur-md border border-gray-100 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
+          className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-white/95 hover:bg-white shadow-xl hover:shadow-2xl rounded-full flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20 backdrop-blur-md border border-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Previous brands"
-          style={{
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)'
-          }}
         >
-          <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
           </svg>
         </button>
@@ -345,14 +393,10 @@ function PremiumBrandLogosPlaceholder() {
         <button
           onClick={scrollNext}
           disabled={isTransitioning}
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/95 hover:bg-white shadow-xl hover:shadow-2xl rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 z-20 backdrop-blur-md border border-gray-100 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
+          className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 w-10 h-10 sm:w-14 sm:h-14 bg-white/95 hover:bg-white shadow-xl hover:shadow-2xl rounded-full flex items-center justify-center opacity-90 sm:opacity-0 sm:group-hover:opacity-100 transition-all duration-200 z-20 backdrop-blur-md border border-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Next brands"
-          style={{
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)'
-          }}
         >
-          <svg className="w-6 h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 sm:w-6 sm:h-6 text-gray-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
           </svg>
         </button>
@@ -363,44 +407,44 @@ function PremiumBrandLogosPlaceholder() {
 
 function PremiumCompanyIntroPlaceholder() {
   return (
-    <section className='bg-gradient-to-r from-blue-50 to-gray-100 py-16'>
+    <section className='bg-gradient-to-r from-blue-50 to-gray-100 py-12 sm:py-16'>
       <div className='container mx-auto px-4 sm:px-6 lg:px-8'>
-        <div className='flex flex-col lg:flex-row items-center gap-8 lg:gap-12'>
-          {/* Image Section */}
-          <div className='w-full lg:w-1/2 opacity-100 translate-y-0 transition-all duration-700 ease-in-out'>
-            <div className='relative group overflow-hidden rounded-lg shadow-xl w-fit mx-auto'>
-              <div className='w-[600px] h-[450px] bg-gradient-to-br from-blue-200 via-blue-100 to-gray-200 rounded-lg transition-transform duration-500 group-hover:scale-105 flex items-center justify-center'>
+        <div className='flex flex-col lg:flex-row items-center gap-6 sm:gap-8 lg:gap-12'>
+          {/* Image Section - Mobile optimized */}
+          <div className='w-full lg:w-1/2'>
+            <div className='relative group overflow-hidden rounded-xl shadow-2xl'>
+              <div className='w-full h-[320px] sm:h-[400px] lg:h-[500px] bg-gradient-to-br from-slate-100 via-blue-50 to-indigo-100 transition-transform duration-500 group-hover:scale-[1.02] flex items-center justify-center'>
                 <div className="text-center text-gray-600">
-                  <svg className="w-24 h-24 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  <svg className="w-20 h-20 sm:w-24 sm:h-24 lg:w-32 lg:h-32 mx-auto mb-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <p className="text-sm font-medium">Configure CMS to show dynamic content here</p>
+                  <p className="text-sm sm:text-base font-medium text-slate-500">Configure CMS to show dynamic content here</p>
                 </div>
               </div>
-              <div className='absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all duration-500'></div>
+              <div className='absolute inset-0 bg-gradient-to-t from-black/5 to-transparent group-hover:from-black/10 transition-all duration-500'></div>
             </div>
           </div>
 
-          {/* Text Section */}
-          <div className='w-full lg:w-1/2 text-center lg:text-left space-y-6'>
-            <h1 className='text-4xl sm:text-5xl font-bold text-gray-900 leading-tight hover:text-blue-600 transition-colors duration-300'>
+          {/* Text Section - Mobile optimized */}
+          <div className='w-full lg:w-1/2 text-center lg:text-left space-y-4 sm:space-y-6'>
+            <h1 className='text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight hover:text-indigo-600 transition-colors duration-300'>
               Welcome to Our World of Innovation
             </h1>
-            <p className='text-lg text-gray-700 hover:text-gray-900 transition-colors duration-300'>
+            <p className='text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed'>
               At our company, we are dedicated to delivering cutting-edge
               solutions that empower businesses and individuals alike. With a
               focus on innovation, quality, and customer satisfaction, we strive
               to create products and services that make a real difference.
             </p>
-            <p className='text-lg text-gray-700 hover:text-gray-900 transition-colors duration-300'>
+            <p className='text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed'>
               Our team of experts is passionate about technology and committed
               to helping you achieve your goals. Whether you are looking for
               eCommerce solutions, web design, or custom software, we have got
               you covered.
             </p>
-            <p className='text-gray-900'>
+            <p className='text-sm sm:text-base text-gray-900'>
               Ready to get started?{' '}
-              <span className='text-blue-600 font-semibold hover:text-blue-800 transition-all duration-200 hover:underline cursor-pointer'>
+              <span className='text-indigo-600 font-semibold hover:text-indigo-800 transition-all duration-300 hover:underline cursor-pointer'>
                 Learn more about us
               </span>{' '}
               and discover how we can help you succeed.
@@ -451,53 +495,27 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
   // Don't block rendering - show skeletons for better Core Web Vitals
 
   return (
-    <>
-      {/* Critical CSS for immediate render - prevents CLS */}
-      <style jsx>{`
-        .homepage-critical {
-          min-height: 100vh;
-          background-color: #f9fafb;
-        }
-        .hero-section-critical {
-          height: 280px;
-          background-color: #f8fafc;
-          border-radius: 0.5rem;
-          margin-bottom: 1rem;
-        }
-        @media (min-width: 640px) {
-          .hero-section-critical {
-            height: 400px;
-            border-radius: 1rem;
-            margin-bottom: 2rem;
-          }
-        }
-        .mini-banners-critical {
-          padding-bottom: 100%;
-          border-radius: 1rem;
-          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-        }
-        .product-card-critical {
-          aspect-ratio: 4/5;
-          max-width: 220px;
-          background-color: #f8fafc;
-          border-radius: 0.75rem;
-        }
-      `}</style>
-      
-      <div className='homepage-critical'>
+    <div className='min-h-screen bg-gray-50'>
         <main className='mx-auto max-w-[1920px] px-4 sm:px-6' style={{ contain: 'layout style paint' }}>
-        {/* Hero Carousel - Critical LCP optimization */}
-        <section className='relative pt-2 mb-4 sm:mb-8 px-0 sm:px-4' style={{ contain: 'layout' }}>
-          <div className='hero-section-critical hero-carousel overflow-hidden' style={{ 
+        {/* Hero Carousel - Proper desktop proportions */}
+        <section className='relative pt-2 mb-4 sm:mb-6 lg:mb-8 px-0 sm:px-4' style={{ contain: 'layout' }}>
+          <div className='h-[300px] sm:h-[450px] lg:h-[550px] xl:h-[600px] relative overflow-hidden rounded-lg sm:rounded-2xl bg-gray-50' style={{ 
             backfaceVisibility: 'hidden',
             willChange: 'auto'
           }}>
             {!isLoaded ? (
-              <div className="hero-section-critical flex items-center justify-center">
-                <div className="text-center space-y-3 sm:space-y-4">
-                  <div className="h-6 sm:h-10 bg-gray-300/40 rounded mx-auto" style={{ width: '200px' }}></div>
-                  <div className="h-4 sm:h-6 bg-gray-300/30 rounded mx-auto" style={{ width: '260px' }}></div>
-                  <div className="h-8 sm:h-10 bg-white/60 rounded-full mx-auto" style={{ width: '120px' }}></div>
+              <div className="absolute inset-0 flex items-center justify-center mobile-loading">
+                {/* Optimized mobile-first skeleton */}
+                <div className="text-center space-y-3 sm:space-y-6 px-4 sm:px-8">
+                  <div className="mobile-skeleton">
+                    <div className="h-6 sm:h-10 lg:h-14 bg-gray-300 rounded mx-auto w-48 sm:w-64 lg:w-80"></div>
+                  </div>
+                  <div className="mobile-skeleton">
+                    <div className="h-4 sm:h-6 lg:h-7 bg-gray-200 rounded mx-auto w-56 sm:w-72 lg:w-96"></div>
+                  </div>
+                  <div className="mobile-skeleton">
+                    <div className="h-8 sm:h-10 lg:h-12 bg-white/80 rounded-full mx-auto w-24 sm:w-32 lg:w-40 border shadow-md"></div>
+                  </div>
                 </div>
               </div>
             ) : isNoCms ? (
@@ -507,7 +525,7 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
             ) : isBuilderIO ? (
               <CMSPlaceholder title="Builder.IO" message="Builder.IO is coming soon" />
             ) : (
-              <Suspense fallback={<div className="w-full h-96 bg-gray-50 rounded-2xl"></div>}>
+              <Suspense fallback={<div className="mobile-loading w-full h-96 bg-gray-50 rounded-2xl mobile-skeleton"></div>}>
                 <HomeCarousel items={carouselData.data.slice(0, mainBannersCount)} />
               </Suspense>
             )}
@@ -516,10 +534,10 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
 
         {/* Mini Banners - Viewport optimized */}
         <ErrorBoundary fallback={<MiniBannersSkeleton />}>
-          <section className='mt-2 mb-8 px-0 sm:px-4' style={{ contain: 'layout style paint' }}>
-            <div className="mini-banners-critical">
+          <section className='mb-6 sm:mb-8 lg:mb-10 px-0 sm:px-4' style={{ contain: 'layout style paint' }}>
+            <div>
               {!isLoaded ? (
-                <MiniBannersSkeleton />
+                <div className="mobile-loading"><MiniBannersSkeleton /></div>
               ) : isNoCms ? (
                 <Suspense fallback={<MiniBannersSkeleton />}>
                   <PremiumMiniBannersPlaceholder count={miniBannersCount} />
@@ -539,10 +557,10 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
 
         {/* Company Intro */}
         <ErrorBoundary fallback={<CompanyIntroSkeleton />}>
-          <section className={`mt-8 mb-8 px-0 sm:px-4 ${!isLoaded || !showCompanySection ? 'hidden' : ''}`}>
+          <section className={`mb-6 sm:mb-8 lg:mb-10 px-0 sm:px-4 ${!isLoaded || !showCompanySection ? 'hidden' : ''}`}>
             <div className='rounded-2xl overflow-hidden'>
               {!isLoaded ? (
-                <CompanyIntroSkeleton />
+                <div className="mobile-loading"><CompanyIntroSkeleton /></div>
               ) : isNoCms ? (
                 <PremiumCompanyIntroPlaceholder />
               ) : isCustomCms ? (
@@ -560,25 +578,21 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
 
         {/* Featured Products - Performance optimized */}
         <ErrorBoundary fallback={<ProductSliderSkeleton />}>
-          <section className='mt-8 mb-8 px-0 sm:px-4' style={{ contain: 'layout style paint' }}>
-            <div className='rounded-2xl overflow-hidden'>
-              {!isLoaded ? (
-                <ProductSliderSkeleton />
-              ) : (
-                <Suspense fallback={<ProductSliderSkeleton />}>
-                  <FeaturedProductsSection featuredProducts={featuredProducts.slice(0, 4)} />
-                </Suspense>
-              )}
+          <section className='mb-6 sm:mb-8 lg:mb-10 px-0 sm:px-4' style={{ contain: 'layout style paint' }}>
+            <div className='rounded-2xl' style={{ overflow: 'visible' }}>
+              <Suspense fallback={<ProductSliderSkeleton />}>
+                <FeaturedProductsSection featuredProducts={featuredProducts.slice(0, featuredProductsCount)} />
+              </Suspense>
             </div>
           </section>
         </ErrorBoundary>
 
         {/* Brand Logos */}
         <ErrorBoundary fallback={<BrandLogosSkeleton />}>
-          <section className='mt-8 pb-12 px-0 sm:px-4'>
+          <section className='mb-6 sm:mb-8 lg:mb-10 pb-8 sm:pb-12 px-0 sm:px-4'>
             <div className='rounded-2xl overflow-hidden'>
               {!isLoaded ? (
-                <BrandLogosSkeleton />
+                <div className="mobile-loading"><BrandLogosSkeleton /></div>
               ) : isNoCms ? (
                 <PremiumBrandLogosPlaceholder />
               ) : isCustomCms ? (
@@ -598,12 +612,26 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
 
 function ProductSliderSkeleton() {
   return (
-    <div className='w-full py-8'>
-      <h2 className='text-3xl font-bold mb-6'>Featured Products</h2>
-      <div className='grid grid-cols-2 md:grid-cols-4 gap-4'>
-        {Array.from({ length: 4 }).map((_, i) => (
-          <ProductCardSkeleton key={i} view='grid' />
-        ))}
+    <div className="w-full bg-gradient-to-br from-gray-50 via-white to-gray-50/30 py-6 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-8" style={{ isolation: 'isolate' }}>
+      {/* Header skeleton - matches actual slider */}
+      <div className="mb-6 sm:mb-8 lg:mb-12 text-center">
+        <div className="inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 bg-gray-300 rounded-2xl mb-3 sm:mb-4 lg:mb-6 shadow-lg animate-pulse"></div>
+        <div className="h-6 sm:h-8 lg:h-10 bg-gray-300 rounded mx-auto w-48 sm:w-64 lg:w-80 mb-2 sm:mb-3 lg:mb-4 animate-pulse"></div>
+        <div className="h-4 sm:h-5 lg:h-6 bg-gray-200 rounded mx-auto w-56 sm:w-72 lg:w-96 mb-3 sm:mb-4 lg:mb-6 animate-pulse"></div>
+        <div className="mx-auto w-20 h-1 rounded-full bg-gray-300 animate-pulse" />
+      </div>
+      {/* Product grid skeleton - matches actual layout */}
+      <div className="relative group py-2 sm:py-4 lg:py-8 px-1 sm:px-2 lg:px-4 -mx-1 sm:-mx-2 lg:-mx-4">
+        <div className="flex gap-2 sm:gap-4 lg:gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex-[0_0_calc(100%-1rem)] sm:flex-[0_0_calc(50%-1rem)] md:flex-[0_0_calc(33.333%-1rem)] lg:flex-[0_0_calc(25%-1rem)]">
+              <ProductCardSkeleton view='grid' />
+            </div>
+          ))}
+        </div>
+        {/* Navigation arrows skeleton - matches actual position */}
+        <div className="absolute left-0 sm:left-1 lg:left-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gray-300 rounded-full animate-pulse shadow-xl z-30"></div>
+        <div className="absolute right-0 sm:right-1 lg:right-2 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-gray-300 rounded-full animate-pulse shadow-xl z-30"></div>
       </div>
     </div>
   )

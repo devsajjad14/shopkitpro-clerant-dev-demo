@@ -180,40 +180,75 @@ html {
 }
 
 /* globals.css */
-/* CLS Protection & Mobile Performance */
+/* CLS Protection & Mobile Performance - World Class Optimization */
 html {
   scroll-padding-top: 4rem;
   scroll-behavior: smooth;
+  /* Enhanced mobile performance */
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Critical mobile performance optimizations */
+/* Critical mobile performance optimizations - Expert level */
 @media screen and (max-width: 768px) {
   .hero-carousel {
-    height: 280px !important;
-    min-height: 280px !important;
+    height: 300px !important;
+    min-height: 300px !important;
+    contain: layout style paint !important;
+    will-change: auto !important;
   }
   
   .hero-title {
-    font-size: 1.5rem !important;
-    line-height: 2rem !important;
+    font-size: 1.25rem !important;
+    line-height: 1.75rem !important;
+    contain: layout !important;
   }
   
   .hero-subtitle {
     font-size: 0.875rem !important;
     line-height: 1.25rem !important;
+    contain: layout !important;
+  }
+  
+  /* Button optimization */
+  .hero-button {
+    padding: 0.5rem 1rem !important;
+    font-size: 0.875rem !important;
+    min-height: 44px !important;
+  }
+  
+  /* Dots optimization */
+  .carousel-dot {
+    width: 0.5rem !important;
+    height: 0.5rem !important;
   }
 }
 
-/* Reduce mobile paint complexity */
+/* Reduce mobile paint complexity - World class optimization */
 @media screen and (max-width: 768px) {
   .mobile-optimized {
     will-change: auto;
     transform: translateZ(0);
     backface-visibility: hidden;
+    contain: layout style paint;
   }
   
   .mobile-simple-gradient {
     background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  }
+  
+  /* Disable complex effects on mobile */
+  .mobile-disable-effects {
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  
+  /* Mobile-specific containment */
+  .mobile-contain {
+    contain: strict;
   }
 }
 
@@ -251,4 +286,68 @@ button,
 
 .animate-shimmer {
   animation: shimmer 1.2s cubic-bezier(0.4, 0, 0.6, 1) 1;
+}
+
+/* Advanced mobile performance optimizations */
+@media screen and (max-width: 768px) {
+  /* Force hardware acceleration for critical elements */
+  .mobile-accelerated {
+    transform: translate3d(0, 0, 0);
+    will-change: transform;
+  }
+  
+  /* Reduce animation complexity */
+  .mobile-simple-animation {
+    animation-duration: 0.2s !important;
+    transition-duration: 0.2s !important;
+  }
+  
+  /* Optimize image rendering */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: crisp-edges;
+  }
+  
+  /* Disable smooth scrolling on mobile for better performance */
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Intersection Observer optimization */
+.lazy-load {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.lazy-load.loaded {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Mobile-first loading states */
+@media screen and (max-width: 768px) {
+  .mobile-loading {
+    background: #f8fafc;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .mobile-skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+  }
+}
+
+@keyframes loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

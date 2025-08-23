@@ -56,7 +56,7 @@ const ProductCard = React.memo(({ product, priority = false }: ProductCardProps)
       >
         <CardHeader className='p-0 relative bg-transparent border-none shadow-none'>
           {/* Minimalist Premium Image Container */}
-          <div className="relative aspect-[4/5] w-full max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-gray-100 rounded-xl transition-all duration-500 group-hover/card:scale-105">
+          <div className="relative aspect-[4/5] w-full max-w-[180px] sm:max-w-[200px] lg:max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-gray-100 rounded-xl transition-all duration-300 group-hover/card:scale-105">
             <Image
               loader={alumnihallLoader}
               src={product.MEDIUMPICTURE}
@@ -80,42 +80,42 @@ const ProductCard = React.memo(({ product, priority = false }: ProductCardProps)
         </CardHeader>
       </Link>
 
-      <CardContent className='flex flex-col gap-3 p-5 sm:p-7'>
+      <CardContent className='flex flex-col gap-2 sm:gap-3 p-3 sm:p-4 lg:p-5'>
         <CardTitle
-          className='text-lg sm:text-xl font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300 line-clamp-2'
-          style={{ minHeight: '3em' }}
+          className='text-sm sm:text-base lg:text-lg font-semibold text-gray-800 hover:text-blue-600 transition-colors duration-300 line-clamp-2'
+          style={{ minHeight: '2.5em' }}
         >
           {product.NAME}
         </CardTitle>
         {product.SELLING_PRICE < product.REGULAR_PRICE ? (
           <div className='flex flex-col sm:flex-row sm:items-center gap-2'>
-            <p className='text-lg sm:text-xl font-bold text-red-500'>
+            <p className='text-base sm:text-lg lg:text-xl font-bold text-red-500'>
               ${product.SELLING_PRICE}
             </p>
-            <p className='text-sm sm:text-base font-medium line-through text-gray-400'>
+            <p className='text-xs sm:text-sm lg:text-base font-medium line-through text-gray-400'>
               ${product.REGULAR_PRICE}
             </p>
           </div>
         ) : (
-          <p className='text-lg sm:text-xl font-bold text-gray-800'>
+          <p className='text-base sm:text-lg lg:text-xl font-bold text-gray-800'>
             ${product.REGULAR_PRICE}
           </p>
         )}
-        <CardDescription className='text-sm sm:text-base text-gray-600 line-clamp-2'>
+        <CardDescription className='text-xs sm:text-sm lg:text-base text-gray-600 line-clamp-2'>
           {product.BRAND}
         </CardDescription>
       </CardContent>
 
-      <CardFooter className='p-5 sm:p-7 bg-gray-50 rounded-b-2xl'>
+      <CardFooter className='p-3 sm:p-4 lg:p-5 bg-gray-50 rounded-b-2xl'>
         <Link
           href={`/product/id/${product.STYLE_ID}/name${urlFriendly(
             product.NAME
           )}`}
           className='w-full'
         >
-          <Button className='w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl text-base font-semibold rounded-full py-3'>
+          <Button className='w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg hover:shadow-xl text-xs sm:text-sm lg:text-base font-semibold rounded-full py-2 sm:py-2.5 lg:py-3'>
             <span>VIEW DETAIL</span>
-            <ArrowRight className='w-4 h-4 sm:w-5 sm:h-5' />
+            <ArrowRight className='w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5' />
           </Button>
         </Link>
       </CardFooter>
