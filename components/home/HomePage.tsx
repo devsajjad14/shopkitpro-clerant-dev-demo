@@ -54,6 +54,19 @@ function CMSPlaceholder({ title, message }: { title: string; message: string }) 
 function PremiumHeroCarouselPlaceholder() {
   const [currentSlide, setCurrentSlide] = React.useState(0)
   const [isTransitioning, setIsTransitioning] = React.useState(false)
+  const [isMobile, setIsMobile] = React.useState(false)
+  
+  // Check if mobile on mount - use CSS media queries for immediate render
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768)
+    // Use requestAnimationFrame to avoid layout thrashing
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(checkMobile)
+    }
+    const handleResize = () => requestAnimationFrame(checkMobile)
+    window.addEventListener('resize', handleResize, { passive: true })
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
   
   const slides = [
     {
@@ -100,52 +113,66 @@ function PremiumHeroCarouselPlaceholder() {
     setTimeout(() => setIsTransitioning(false), 600)
   }, [isTransitioning, currentSlide])
 
-  // Auto-slide functionality
+  // Auto-slide functionality - optimized for performance
   React.useEffect(() => {
+    // Disable auto-slide on mobile to reduce battery usage
+    if (isMobile) return
+    
     const interval = setInterval(() => {
-      if (!isTransitioning) {
+      if (!isTransitioning && document.visibilityState === 'visible') {
         nextSlide()
       }
-    }, 5000)
+    }, 6000) // Increased to 6s to reduce frequency
     
     return () => clearInterval(interval)
-  }, [nextSlide, isTransitioning])
+  }, [nextSlide, isTransitioning, isMobile])
 
   const currentSlideData = slides[currentSlide]
   
   return (
-    <div className="relative overflow-hidden rounded-2xl" style={{ height: '500px', contain: 'layout style paint' }}>
-      {/* Background with smooth transition */}
+    <div className={`hero-carousel relative overflow-hidden rounded-lg sm:rounded-2xl ${isMobile ? 'mobile-optimized' : ''}`} style={{ 
+      height: isMobile ? '280px' : '500px', 
+      contain: 'layout style paint',
+      willChange: 'auto'
+    }}>
+      {/* Background with smooth transition - simplified for mobile */}
       <div 
-        className={`absolute inset-0 bg-gradient-to-br ${currentSlideData.gradient} transition-all duration-700 ease-in-out`}
+        className={isMobile ? 
+          'absolute inset-0 mobile-simple-gradient' : 
+          `absolute inset-0 bg-gradient-to-br ${currentSlideData.gradient} transition-all duration-700 ease-in-out`
+        }
       />
-      <div 
-        className={`absolute inset-0 bg-gradient-to-r ${currentSlideData.overlay} transition-all duration-700 ease-in-out`}
-      />
-      
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 opacity-5">
+      {!isMobile && (
         <div 
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23000\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"7\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"7\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"7\" cy=\"47\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"47\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"47\" r=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
-          }}
+          className={`absolute inset-0 bg-gradient-to-r ${currentSlideData.overlay} transition-all duration-700 ease-in-out`}
         />
-      </div>
+      )}
       
-      {/* Content with smooth transitions */}
-      <div className="relative flex items-center justify-center h-full text-center px-8">
-        <div className="max-w-4xl">
-          <h1 className={`text-5xl md:text-7xl font-bold text-gray-800 mb-6 leading-tight transition-all duration-700 ease-in-out ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+      {/* Subtle pattern overlay - Skip on mobile for performance */}
+      {!isMobile && (
+        <div className="absolute inset-0 opacity-5">
+          <div 
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23000\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"7\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"7\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"7\" cy=\"47\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"47\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"47\" r=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
+            }}
+          />
+        </div>
+      )}
+      
+      {/* Content with smooth transitions - Mobile optimized */}
+      <div className="relative flex items-center justify-center h-full text-center px-4 sm:px-8">
+        <div className={isMobile ? "max-w-sm" : "max-w-4xl"}>
+          <h1 className={`hero-title ${isMobile ? 'text-2xl mobile-optimized' : 'text-5xl md:text-7xl'} font-bold text-gray-800 mb-4 sm:mb-6 leading-tight ${isTransitioning && !isMobile ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`} style={{ transform: 'translateZ(0)' }}>
             {currentSlideData.title}
           </h1>
-          <p className={`text-xl md:text-2xl text-gray-600 mb-8 leading-relaxed transition-all duration-700 ease-in-out delay-100 ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
+          <p className={`hero-subtitle ${isMobile ? 'text-sm mobile-optimized' : 'text-xl md:text-2xl'} text-gray-600 mb-4 sm:mb-8 leading-relaxed ${isTransitioning && !isMobile ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`} style={{ transform: 'translateZ(0)' }}>
             Configure CMS to show dynamic content here
           </p>
-          <div className={`transition-all duration-700 ease-in-out delay-200 ${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`}>
-            <button className="inline-flex items-center px-8 py-4 bg-white/80 backdrop-blur-md rounded-full border border-white/30 text-gray-800 font-semibold text-lg shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105">
+          <div className={`${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`} style={{ transform: 'translateZ(0)' }}>
+            <button className={`inline-flex items-center ${isMobile ? 'px-4 py-2 text-sm' : 'px-8 py-4 text-lg'} bg-white/80 backdrop-blur-md rounded-full border border-white/30 text-gray-800 font-semibold shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105`}>
               <span>{currentSlideData.cta}</span>
-              <svg className="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className={`${isMobile ? 'w-4 h-4 ml-1' : 'w-5 h-5 ml-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
               </svg>
             </button>
@@ -153,44 +180,51 @@ function PremiumHeroCarouselPlaceholder() {
         </div>
       </div>
       
-      {/* Navigation dots */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex space-x-3">
+      {/* Navigation dots - Mobile optimized */}
+      <div className={`absolute ${isMobile ? 'bottom-3' : 'bottom-6'} left-1/2 -translate-x-1/2 flex space-x-3`}>
         {slides.map((_, index) => (
           <button
             key={index}
             onClick={() => goToSlide(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
+            className={`${isMobile ? 'w-2 h-2' : 'w-3 h-3'} rounded-full transition-all duration-300 ${
               index === currentSlide 
                 ? 'bg-white shadow-lg scale-125' 
                 : 'bg-white/60 hover:bg-white/80'
             }`}
             aria-label={`Go to slide ${index + 1}`}
+            style={{ transform: 'translateZ(0)' }}
           />
         ))}
       </div>
       
-      {/* Navigation arrows */}
-      <button 
-        onClick={prevSlide}
-        disabled={isTransitioning}
-        className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
-        aria-label="Previous slide"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-        </svg>
-      </button>
-      
-      <button 
-        onClick={nextSlide}
-        disabled={isTransitioning}
-        className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
-        aria-label="Next slide"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-        </svg>
-      </button>
+      {/* Navigation arrows - Mobile optimized */}
+      {!isMobile && (
+        <>
+          <button 
+            onClick={prevSlide}
+            disabled={isTransitioning}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
+            aria-label="Previous slide"
+            style={{ transform: 'translateZ(0)' }}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <button 
+            onClick={nextSlide}
+            disabled={isTransitioning}
+            className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
+            aria-label="Next slide"
+            style={{ transform: 'translateZ(0)' }}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </>
+      )}
     </div>
   )
 }
@@ -480,11 +514,56 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
   return (
     <div className='min-h-screen bg-gray-50'>
       <main className='mx-auto max-w-[1920px] px-4 sm:px-6' style={{ contain: 'layout style paint' }}>
-        {/* Hero Carousel */}
-        <section className='relative pt-2 mb-8 px-0 sm:px-4'>
-          <div className='rounded-2xl overflow-hidden'>
+        {/* Hero Carousel - Mobile-first LCP optimization */}
+        <section className='relative pt-2 mb-4 sm:mb-8 px-0 sm:px-4' style={{ contain: 'layout' }}>
+          <div className='hero-carousel rounded-lg sm:rounded-2xl overflow-hidden' style={{ 
+            backgroundColor: '#f8fafc',
+            backfaceVisibility: 'hidden'
+          }}>
             {!isLoaded ? (
-              <HomeCarouselSkeleton />
+              <div 
+                className="hero-carousel relative overflow-hidden rounded-lg sm:rounded-2xl"
+                style={{ 
+                  willChange: 'auto',
+                  transform: 'translateZ(0)'
+                }}
+              >
+                {/* Exact background match */}
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" />
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-blue-900/20 to-indigo-900/30" />
+                
+                {/* Content skeleton matching exact layout */}
+                <div className="relative flex items-center justify-center h-full text-center px-4 sm:px-8">
+                  <div className="max-w-sm sm:max-w-4xl">
+                    {/* Title skeleton - exact match */}
+                    <div className="animate-pulse mb-4 sm:mb-6">
+                      <div className="h-8 sm:h-16 md:h-20 bg-gray-300/60 rounded-lg mx-auto" 
+                           style={{ width: '280px', maxWidth: '90%' }}></div>
+                    </div>
+                    {/* Subtitle skeleton - exact match */}
+                    <div className="animate-pulse mb-4 sm:mb-8">
+                      <div className="h-4 sm:h-6 md:h-7 bg-gray-300/50 rounded-lg mx-auto" 
+                           style={{ width: '320px', maxWidth: '95%' }}></div>
+                    </div>
+                    {/* Button skeleton - exact match */}
+                    <div className="animate-pulse">
+                      <div className="h-10 sm:h-14 bg-white/70 rounded-full mx-auto border border-white/30 shadow-lg" 
+                           style={{ width: '140px' }}></div>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Navigation dots skeleton */}
+                <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 flex space-x-3">
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full shadow-lg"></div>
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white/60 rounded-full"></div>
+                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white/60 rounded-full"></div>
+                </div>
+                
+                {/* Navigation arrows skeleton - desktop only */}
+                <div className="hidden sm:block absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 rounded-full shadow-lg border border-white/30"></div>
+                <div className="hidden sm:block absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 rounded-full shadow-lg border border-white/30"></div>
+              </div>
             ) : isNoCms ? (
               <PremiumHeroCarouselPlaceholder />
             ) : isCustomCms ? (
@@ -492,7 +571,7 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
             ) : isBuilderIO ? (
               <CMSPlaceholder title="Builder.IO" message="Builder.IO is coming soon" />
             ) : (
-              <Suspense fallback={<HomeCarouselSkeleton />}>
+              <Suspense fallback={<div className="w-full h-96 bg-gray-50 rounded-2xl"></div>}>
                 <HomeCarousel items={carouselData.data.slice(0, mainBannersCount)} />
               </Suspense>
             )}

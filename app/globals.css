@@ -180,10 +180,41 @@ html {
 }
 
 /* globals.css */
-/* CLS Protection */
+/* CLS Protection & Mobile Performance */
 html {
   scroll-padding-top: 4rem;
   scroll-behavior: smooth;
+}
+
+/* Critical mobile performance optimizations */
+@media screen and (max-width: 768px) {
+  .hero-carousel {
+    height: 280px !important;
+    min-height: 280px !important;
+  }
+  
+  .hero-title {
+    font-size: 1.5rem !important;
+    line-height: 2rem !important;
+  }
+  
+  .hero-subtitle {
+    font-size: 0.875rem !important;
+    line-height: 1.25rem !important;
+  }
+}
+
+/* Reduce mobile paint complexity */
+@media screen and (max-width: 768px) {
+  .mobile-optimized {
+    will-change: auto;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  .mobile-simple-gradient {
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  }
 }
 
 /* Tap Targets */
