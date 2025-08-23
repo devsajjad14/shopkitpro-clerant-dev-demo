@@ -354,12 +354,23 @@ button,
 
 /* Mobile-only performance critical optimizations */
 @media screen and (max-width: 768px) {
-  /* Force GPU acceleration for critical elements */
+  /* Force GPU acceleration and containment for critical elements */
   .hero-carousel,
   .mobile-optimized {
     transform: translateZ(0);
     will-change: auto;
     contain: strict;
+  }
+  
+  /* Prevent layout shifts on mobile */
+  .min-h-screen {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  
+  /* Optimize main container */
+  main {
+    contain: layout style paint;
   }
   
   /* Disable expensive effects */

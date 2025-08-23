@@ -13,6 +13,7 @@ export default function Logo() {
         width={120}
         height={40}
         priority
+        fetchPriority="high"
         style={{ width: 'auto', height: '80px' }} // Maintain aspect ratio
       />
     </Link>

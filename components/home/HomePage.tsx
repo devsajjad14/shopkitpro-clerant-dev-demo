@@ -135,13 +135,15 @@ function PremiumHeroCarouselPlaceholder() {
     setTimeout(() => setIsTransitioning(false), 600)
   }, [isTransitioning, currentSlide])
 
-  // Auto-slide functionality - works on all devices
+  // Auto-slide functionality - disabled on mobile for performance
   React.useEffect(() => {
+    if (isMobile || typeof window === 'undefined') return // No auto-slide on mobile
+    
     const interval = setInterval(() => {
       if (!isTransitioning && document.visibilityState === 'visible') {
         nextSlide()
       }
-    }, isMobile ? 8000 : 6000) // Slower on mobile to save battery
+    }, 6000)
     
     return () => clearInterval(interval)
   }, [nextSlide, isTransitioning, isMobile])
@@ -162,14 +164,14 @@ function PremiumHeroCarouselPlaceholder() {
       
       {/* Content - Perfectly centered */}
       <div className="absolute inset-0 flex items-center justify-center text-center px-4 sm:px-8 lg:px-16">
-        <div className="max-w-xs sm:max-w-2xl lg:max-w-4xl">
-          <h1 className="text-xl sm:text-3xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-3 sm:mb-6 lg:mb-8 leading-tight">
+        <div className="max-w-xs sm:max-w-2xl lg:max-w-4xl" style={{ minHeight: '120px' }}>
+          <h1 className="text-lg sm:text-3xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-2 sm:mb-6 lg:mb-8 leading-tight" style={{ minHeight: '1.5rem' }}>
             {currentSlideData.title}
           </h1>
-          <p className="text-sm sm:text-lg lg:text-xl text-gray-600 mb-4 sm:mb-8 lg:mb-10 leading-relaxed">
+          <p className="text-xs sm:text-lg lg:text-xl text-gray-600 mb-3 sm:mb-8 lg:mb-10 leading-relaxed" style={{ minHeight: '0.75rem' }}>
             Configure CMS to show dynamic content here
           </p>
-          <button className="inline-flex items-center px-3 py-1.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 bg-white/90 backdrop-blur-sm rounded-full text-gray-800 font-semibold shadow-lg hover:shadow-xl hover:bg-white transition-all duration-200 text-xs sm:text-lg lg:text-xl">
+          <button className="inline-flex items-center px-3 py-1.5 sm:px-8 sm:py-4 lg:px-10 lg:py-5 bg-white/90 backdrop-blur-sm rounded-full text-gray-800 font-semibold shadow-lg hover:shadow-xl hover:bg-white transition-all duration-200 text-xs sm:text-lg lg:text-xl" style={{ minHeight: '28px', minWidth: '80px' }}>
             <span>{currentSlideData.cta}</span>
             <svg className="w-3 h-3 sm:w-5 sm:h-5 lg:w-6 lg:h-6 ml-1 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
