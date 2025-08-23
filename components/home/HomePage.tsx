@@ -14,24 +14,28 @@ import { useCmsType } from '@/lib/hooks/use-cms-type'
 import useSettingStore from '@/hooks/use-setting-store'
 import type { CarouselItem } from '@/types/carousel-types'
 
-// Dynamic imports with proper error handling
+// Lazy dynamic imports for better performance
 const MiniBanners = dynamic(() => import('@/components/home/mini-banners'), {
   loading: () => <MiniBannersSkeleton />,
+  ssr: false,
 })
 
 const FeaturedProductsSection = dynamic(
   () => import('@/components/product/FeaturedProductsSection'),
   {
     loading: () => <ProductSliderSkeleton />,
+    ssr: true, // Keep SSR for featured products as they're important
   }
 )
 
 const CompanyIntro = dynamic(() => import('@/components/home/company-intro'), {
   loading: () => <CompanyIntroSkeleton />,
+  ssr: false,
 })
 
 const BrandLogoSlider = dynamic(() => import('@/components/home/brand-logos'), {
   loading: () => <BrandLogosSkeleton />,
+  ssr: false,
 })
 
 // CMS Placeholder Components
@@ -56,16 +60,10 @@ function PremiumHeroCarouselPlaceholder() {
   const [isTransitioning, setIsTransitioning] = React.useState(false)
   const [isMobile, setIsMobile] = React.useState(false)
   
-  // Check if mobile on mount - use CSS media queries for immediate render
+  // Simplified mobile detection with immediate render
   React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    // Use requestAnimationFrame to avoid layout thrashing
-    if (typeof window !== 'undefined') {
-      requestAnimationFrame(checkMobile)
-    }
-    const handleResize = () => requestAnimationFrame(checkMobile)
-    window.addEventListener('resize', handleResize, { passive: true })
-    return () => window.removeEventListener('resize', handleResize)
+    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768
+    setIsMobile(isMobileDevice)
   }, [])
   
   const slides = [
@@ -130,101 +128,30 @@ function PremiumHeroCarouselPlaceholder() {
   const currentSlideData = slides[currentSlide]
   
   return (
-    <div className={`hero-carousel relative overflow-hidden rounded-lg sm:rounded-2xl ${isMobile ? 'mobile-optimized' : ''}`} style={{ 
-      height: isMobile ? '280px' : '500px', 
+    <div className="hero-section-critical relative overflow-hidden" style={{ 
       contain: 'layout style paint',
       willChange: 'auto'
     }}>
-      {/* Background with smooth transition - simplified for mobile */}
-      <div 
-        className={isMobile ? 
-          'absolute inset-0 mobile-simple-gradient' : 
-          `absolute inset-0 bg-gradient-to-br ${currentSlideData.gradient} transition-all duration-700 ease-in-out`
-        }
-      />
-      {!isMobile && (
-        <div 
-          className={`absolute inset-0 bg-gradient-to-r ${currentSlideData.overlay} transition-all duration-700 ease-in-out`}
-        />
-      )}
+      {/* Simplified static background for performance */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" />
       
-      {/* Subtle pattern overlay - Skip on mobile for performance */}
-      {!isMobile && (
-        <div className="absolute inset-0 opacity-5">
-          <div 
-            className="absolute inset-0 opacity-20"
-            style={{
-              backgroundImage: "url('data:image/svg+xml,%3Csvg width=\"60\" height=\"60\" viewBox=\"0 0 60 60\" xmlns=\"http://www.w3.org/2000/svg\"%3E%3Cg fill=\"none\" fill-rule=\"evenodd\"%3E%3Cg fill=\"%23000\" fill-opacity=\"0.1\"%3E%3Ccircle cx=\"7\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"7\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"7\" cy=\"47\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"27\" cy=\"47\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"7\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"27\" r=\"1\"/%3E%3Ccircle cx=\"47\" cy=\"47\" r=\"1\"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')"
-            }}
-          />
-        </div>
-      )}
-      
-      {/* Content with smooth transitions - Mobile optimized */}
+      {/* Ultra-lightweight content for fast LCP */}
       <div className="relative flex items-center justify-center h-full text-center px-4 sm:px-8">
-        <div className={isMobile ? "max-w-sm" : "max-w-4xl"}>
-          <h1 className={`hero-title ${isMobile ? 'text-2xl mobile-optimized' : 'text-5xl md:text-7xl'} font-bold text-gray-800 mb-4 sm:mb-6 leading-tight ${isTransitioning && !isMobile ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`} style={{ transform: 'translateZ(0)' }}>
+        <div className="max-w-lg">
+          <h1 className="text-2xl sm:text-4xl md:text-6xl font-bold text-gray-800 mb-4 leading-tight">
             {currentSlideData.title}
           </h1>
-          <p className={`hero-subtitle ${isMobile ? 'text-sm mobile-optimized' : 'text-xl md:text-2xl'} text-gray-600 mb-4 sm:mb-8 leading-relaxed ${isTransitioning && !isMobile ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`} style={{ transform: 'translateZ(0)' }}>
+          <p className="text-sm sm:text-lg md:text-xl text-gray-600 mb-6 leading-relaxed">
             Configure CMS to show dynamic content here
           </p>
-          <div className={`${isTransitioning ? 'opacity-0 translate-y-4' : 'opacity-100 translate-y-0'}`} style={{ transform: 'translateZ(0)' }}>
-            <button className={`inline-flex items-center ${isMobile ? 'px-4 py-2 text-sm' : 'px-8 py-4 text-lg'} bg-white/80 backdrop-blur-md rounded-full border border-white/30 text-gray-800 font-semibold shadow-lg hover:bg-white hover:shadow-xl transition-all duration-300 hover:scale-105`}>
-              <span>{currentSlideData.cta}</span>
-              <svg className={`${isMobile ? 'w-4 h-4 ml-1' : 'w-5 h-5 ml-2'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-              </svg>
-            </button>
-          </div>
+          <button className="inline-flex items-center px-6 py-3 bg-white/90 rounded-full text-gray-800 font-semibold shadow-md hover:shadow-lg">
+            <span>{currentSlideData.cta}</span>
+            <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+            </svg>
+          </button>
         </div>
       </div>
-      
-      {/* Navigation dots - Mobile optimized */}
-      <div className={`absolute ${isMobile ? 'bottom-3' : 'bottom-6'} left-1/2 -translate-x-1/2 flex space-x-3`}>
-        {slides.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => goToSlide(index)}
-            className={`${isMobile ? 'w-2 h-2' : 'w-3 h-3'} rounded-full transition-all duration-300 ${
-              index === currentSlide 
-                ? 'bg-white shadow-lg scale-125' 
-                : 'bg-white/60 hover:bg-white/80'
-            }`}
-            aria-label={`Go to slide ${index + 1}`}
-            style={{ transform: 'translateZ(0)' }}
-          />
-        ))}
-      </div>
-      
-      {/* Navigation arrows - Mobile optimized */}
-      {!isMobile && (
-        <>
-          <button 
-            onClick={prevSlide}
-            disabled={isTransitioning}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
-            aria-label="Previous slide"
-            style={{ transform: 'translateZ(0)' }}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <button 
-            onClick={nextSlide}
-            disabled={isTransitioning}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 hover:bg-white backdrop-blur-md rounded-full flex items-center justify-center border border-white/30 text-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95"
-            aria-label="Next slide"
-            style={{ transform: 'translateZ(0)' }}
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </>
-      )}
     </div>
   )
 }
@@ -509,60 +436,69 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
   const featuredProductsCount = Number(settings.featuredProducts) || 8
   const showCompanySection = parseBoolean(settings.showCompanySection)
 
+  // Preload critical resources
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      // Preload critical images for LCP
+      const link = document.createElement('link')
+      link.rel = 'preload'
+      link.as = 'image'
+      link.href = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImEiIHgxPSIwJSIgeTE9IjAlIiB4Mj0iMTAwJSIgeTI9IjEwMCUiPjxzdG9wIG9mZnNldD0iMCUiIHN0b3AtY29sb3I9IiNmOGZhZmMiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiNlMmU4ZjAiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0idXJsKCNhKSIvPjwvc3ZnPg=='
+      document.head.appendChild(link)
+    }
+  }, [])
+
   // Don't block rendering - show skeletons for better Core Web Vitals
 
   return (
-    <div className='min-h-screen bg-gray-50'>
-      <main className='mx-auto max-w-[1920px] px-4 sm:px-6' style={{ contain: 'layout style paint' }}>
-        {/* Hero Carousel - Mobile-first LCP optimization */}
+    <>
+      {/* Critical CSS for immediate render - prevents CLS */}
+      <style jsx>{`
+        .homepage-critical {
+          min-height: 100vh;
+          background-color: #f9fafb;
+        }
+        .hero-section-critical {
+          height: 280px;
+          background-color: #f8fafc;
+          border-radius: 0.5rem;
+          margin-bottom: 1rem;
+        }
+        @media (min-width: 640px) {
+          .hero-section-critical {
+            height: 400px;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+          }
+        }
+        .mini-banners-critical {
+          padding-bottom: 100%;
+          border-radius: 1rem;
+          background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+        }
+        .product-card-critical {
+          aspect-ratio: 4/5;
+          max-width: 220px;
+          background-color: #f8fafc;
+          border-radius: 0.75rem;
+        }
+      `}</style>
+      
+      <div className='homepage-critical'>
+        <main className='mx-auto max-w-[1920px] px-4 sm:px-6' style={{ contain: 'layout style paint' }}>
+        {/* Hero Carousel - Critical LCP optimization */}
         <section className='relative pt-2 mb-4 sm:mb-8 px-0 sm:px-4' style={{ contain: 'layout' }}>
-          <div className='hero-carousel rounded-lg sm:rounded-2xl overflow-hidden' style={{ 
-            backgroundColor: '#f8fafc',
-            backfaceVisibility: 'hidden'
+          <div className='hero-section-critical hero-carousel overflow-hidden' style={{ 
+            backfaceVisibility: 'hidden',
+            willChange: 'auto'
           }}>
             {!isLoaded ? (
-              <div 
-                className="hero-carousel relative overflow-hidden rounded-lg sm:rounded-2xl"
-                style={{ 
-                  willChange: 'auto',
-                  transform: 'translateZ(0)'
-                }}
-              >
-                {/* Exact background match */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" />
-                <div className="absolute inset-0 bg-gradient-to-r from-slate-900/10 via-blue-900/20 to-indigo-900/30" />
-                
-                {/* Content skeleton matching exact layout */}
-                <div className="relative flex items-center justify-center h-full text-center px-4 sm:px-8">
-                  <div className="max-w-sm sm:max-w-4xl">
-                    {/* Title skeleton - exact match */}
-                    <div className="animate-pulse mb-4 sm:mb-6">
-                      <div className="h-8 sm:h-16 md:h-20 bg-gray-300/60 rounded-lg mx-auto" 
-                           style={{ width: '280px', maxWidth: '90%' }}></div>
-                    </div>
-                    {/* Subtitle skeleton - exact match */}
-                    <div className="animate-pulse mb-4 sm:mb-8">
-                      <div className="h-4 sm:h-6 md:h-7 bg-gray-300/50 rounded-lg mx-auto" 
-                           style={{ width: '320px', maxWidth: '95%' }}></div>
-                    </div>
-                    {/* Button skeleton - exact match */}
-                    <div className="animate-pulse">
-                      <div className="h-10 sm:h-14 bg-white/70 rounded-full mx-auto border border-white/30 shadow-lg" 
-                           style={{ width: '140px' }}></div>
-                    </div>
-                  </div>
+              <div className="hero-section-critical flex items-center justify-center">
+                <div className="text-center space-y-3 sm:space-y-4">
+                  <div className="h-6 sm:h-10 bg-gray-300/40 rounded mx-auto" style={{ width: '200px' }}></div>
+                  <div className="h-4 sm:h-6 bg-gray-300/30 rounded mx-auto" style={{ width: '260px' }}></div>
+                  <div className="h-8 sm:h-10 bg-white/60 rounded-full mx-auto" style={{ width: '120px' }}></div>
                 </div>
-                
-                {/* Navigation dots skeleton */}
-                <div className="absolute bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 flex space-x-3">
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full shadow-lg"></div>
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white/60 rounded-full"></div>
-                  <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white/60 rounded-full"></div>
-                </div>
-                
-                {/* Navigation arrows skeleton - desktop only */}
-                <div className="hidden sm:block absolute left-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 rounded-full shadow-lg border border-white/30"></div>
-                <div className="hidden sm:block absolute right-4 top-1/2 -translate-y-1/2 w-14 h-14 bg-white/80 rounded-full shadow-lg border border-white/30"></div>
               </div>
             ) : isNoCms ? (
               <PremiumHeroCarouselPlaceholder />
@@ -578,20 +514,26 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
           </div>
         </section>
 
-        {/* Mini Banners */}
+        {/* Mini Banners - Viewport optimized */}
         <ErrorBoundary fallback={<MiniBannersSkeleton />}>
-          <section className='mt-2 mb-8 px-0 sm:px-4'>
-            {!isLoaded ? (
-              <MiniBannersSkeleton />
-            ) : isNoCms ? (
-              <PremiumMiniBannersPlaceholder count={miniBannersCount} />
-            ) : isCustomCms ? (
-              <CMSPlaceholder title="Custom CMS Mini Banners" message="Custom CMS will go here" />
-            ) : isBuilderIO ? (
-              <CMSPlaceholder title="Builder.IO Mini Banners" message="Builder.IO is coming soon" />
-            ) : (
-              <MiniBanners banners={miniBanners.slice(0, miniBannersCount)} />
-            )}
+          <section className='mt-2 mb-8 px-0 sm:px-4' style={{ contain: 'layout style paint' }}>
+            <div className="mini-banners-critical">
+              {!isLoaded ? (
+                <MiniBannersSkeleton />
+              ) : isNoCms ? (
+                <Suspense fallback={<MiniBannersSkeleton />}>
+                  <PremiumMiniBannersPlaceholder count={miniBannersCount} />
+                </Suspense>
+              ) : isCustomCms ? (
+                <CMSPlaceholder title="Custom CMS Mini Banners" message="Custom CMS will go here" />
+              ) : isBuilderIO ? (
+                <CMSPlaceholder title="Builder.IO Mini Banners" message="Builder.IO is coming soon" />
+              ) : (
+                <Suspense fallback={<MiniBannersSkeleton />}>
+                  <MiniBanners banners={miniBanners.slice(0, miniBannersCount)} />
+                </Suspense>
+              )}
+            </div>
           </section>
         </ErrorBoundary>
 
@@ -616,14 +558,16 @@ export default function HomePage({ carouselData, miniBanners, featuredProducts, 
           </section>
         </ErrorBoundary>
 
-        {/* Featured Products - Always show actual products */}
+        {/* Featured Products - Performance optimized */}
         <ErrorBoundary fallback={<ProductSliderSkeleton />}>
-          <section className='mt-8 mb-8 px-0 sm:px-4'>
+          <section className='mt-8 mb-8 px-0 sm:px-4' style={{ contain: 'layout style paint' }}>
             <div className='rounded-2xl overflow-hidden'>
               {!isLoaded ? (
                 <ProductSliderSkeleton />
               ) : (
-                <FeaturedProductsSection featuredProducts={featuredProducts} />
+                <Suspense fallback={<ProductSliderSkeleton />}>
+                  <FeaturedProductsSection featuredProducts={featuredProducts.slice(0, 4)} />
+                </Suspense>
               )}
             </div>
           </section>
