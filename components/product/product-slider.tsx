@@ -86,13 +86,13 @@ export default function ProductSlider({ title, products }: ProductSliderProps) {
               backfaceVisibility: 'hidden'
             }}
           >
-            {products.map((product) => (
+            {products.map((product, index) => (
               <div
                 key={product.STYLE_ID}
                 className="flex-[0_0_calc(100%-1.5rem)] sm:flex-[0_0_calc(50%-1.5rem)] md:flex-[0_0_calc(33.333%-1.5rem)] lg:flex-[0_0_calc(25%-1.5rem)] hover:scale-[1.02] transition-transform duration-500 hover:z-[999] relative"
                 style={{ contain: 'layout style paint' }}
               >
-                <ProductCard product={product} />
+                <ProductCard product={product} priority={index < 2} />
               </div>
             ))}
           </div>

@@ -17,6 +17,7 @@ import { urlFriendly } from '@/lib/utils/index'
 
 interface ProductCardProps {
   product: Product
+  priority?: boolean
 }
 
 // Optimized image loader with device-specific sizes
@@ -41,7 +42,7 @@ const getImageSizes = () => {
   return '(max-width: 640px) 90vw, (max-width: 768px) 45vw, (max-width: 1024px) 30vw, 300px'
 }
 
-const ProductCard = React.memo(({ product }: ProductCardProps) => {
+const ProductCard = React.memo(({ product, priority = false }: ProductCardProps) => {
   return (
     <Card
       key={product.STYLE_ID}
@@ -55,17 +56,20 @@ const ProductCard = React.memo(({ product }: ProductCardProps) => {
       >
         <CardHeader className='p-0 relative bg-transparent border-none shadow-none'>
           {/* Minimalist Premium Image Container */}
-          <div className="relative aspect-[4/5] w-full max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-transparent rounded-xl transition-all duration-500 group-hover/card:scale-105">
+          <div className="relative aspect-[4/5] w-full max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-gray-100 rounded-xl transition-all duration-500 group-hover/card:scale-105">
             <Image
               loader={alumnihallLoader}
               src={product.MEDIUMPICTURE}
               alt={product.NAME}
               fill
-              sizes={getImageSizes()}
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 220px"
               className="object-contain rounded-xl p-3 transition-transform duration-300"
-              quality={85}
-              loading='lazy'
+              quality={priority ? 85 : 75}
+              priority={priority}
+              loading={priority ? 'eager' : 'lazy'}
               decoding='async'
+              placeholder="blur"
+              blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyEH4QTgZHfv/Z"
               unoptimized={process.env.NODE_ENV !== 'production'}
             />
             {/* Subtle shimmer effect on hover */}
