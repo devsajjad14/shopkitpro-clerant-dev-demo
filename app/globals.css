@@ -193,9 +193,9 @@ html {
 /* Critical mobile performance optimizations - Expert level */
 @media screen and (max-width: 768px) {
   .hero-carousel {
-    height: 300px !important;
-    min-height: 300px !important;
-    contain: layout style paint !important;
+    height: 280px !important;
+    min-height: 280px !important;
+    contain: strict !important;
     will-change: auto !important;
   }
   
@@ -349,5 +349,40 @@ button,
   }
   100% {
     background-position: -200% 0;
+  }
+}
+
+/* Mobile-only performance critical optimizations */
+@media screen and (max-width: 768px) {
+  /* Force GPU acceleration for critical elements */
+  .hero-carousel,
+  .mobile-optimized {
+    transform: translateZ(0);
+    will-change: auto;
+    contain: strict;
+  }
+  
+  /* Disable expensive effects */
+  .backdrop-blur-sm,
+  .backdrop-blur-md {
+    backdrop-filter: none !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+  }
+  
+  /* Simplify gradients */
+  .bg-gradient-to-br {
+    background: linear-gradient(135deg, #f8fafc, #e2e8f0) !important;
+  }
+  
+  /* Reduce animation complexity */
+  .transition-all {
+    transition-property: opacity, background-color;
+    transition-duration: 0.15s;
+  }
+  
+  /* Optimize shadows */
+  .shadow-xl,
+  .shadow-2xl {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
   }
 }

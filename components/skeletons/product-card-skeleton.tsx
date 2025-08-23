@@ -26,11 +26,11 @@ export function ProductCardSkeleton({
 
   // Grid view - exact match to ProductCard
   return (
-    <div className='p-0 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl bg-white border border-gray-200 animate-pulse'>
+    <div className='p-0 flex flex-col justify-between overflow-hidden shadow-xl rounded-2xl bg-white border border-gray-200 animate-pulse' style={{ minHeight: '380px' }}>
       {/* Header - matches CardHeader */}
       <div className='p-0 relative bg-transparent border-none shadow-none'>
         {/* Image container - exact match */}
-        <div className="relative aspect-[4/5] w-full max-w-[180px] sm:max-w-[200px] lg:max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-gray-100 rounded-xl">
+        <div className="relative aspect-[4/5] w-full max-w-[180px] sm:max-w-[200px] lg:max-w-[220px] mx-auto overflow-hidden flex items-center justify-center bg-gray-100 rounded-xl" style={{ height: '144px' }}>
           <div className="w-full h-full bg-gray-200 rounded-xl p-3"></div>
         </div>
       </div>
